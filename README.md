@@ -7,7 +7,7 @@ A self-hosted marketplace for [Claude Code](https://claude.ai/code) skills and a
 Claude Code's marketplace protocol lets you add custom marketplace sources in settings. This project implements that protocol so you can:
 
 - **Host your own private marketplace** — share internal skills and agents across a team without publishing them publicly.
-- **Aggregate community sources** — pull from `awesome-claude-code-subagents` and other public repos into one place.
+- **Aggregate community sources** — pull from `awesome-claude-code-subagents` and other public repos into one searchable index; git changes are tracked and converted to version updates automatically.
 - **Browse before you install** — read rendered skill docs, filter by type and tags, search by name.
 - **Own your index** — no dependency on any external service; runs entirely on your infrastructure.
 
@@ -133,7 +133,7 @@ uv sync
 uv run uvicorn src.marketplace.main:app --port 8080 --reload
 uv run pytest
 uv run ruff check src/
-uv run mypy src/
+uv run mypy .
 ```
 
 ## License
