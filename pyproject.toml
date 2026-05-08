@@ -52,7 +52,6 @@ python_version = "3.11"
 strict = true
 explicit_package_bases = true
 namespace_packages = true
-mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
 
 [[tool.mypy.overrides]]
 module = ["boto3.*", "botocore.*", "fastapi.*", "git.*"]

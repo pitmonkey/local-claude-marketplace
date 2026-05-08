@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -12,6 +13,9 @@ from src.marketplace.core.sources import (
     remove_user_source,
 )
 from src.marketplace.storage.base import SourceRecord
+
+if TYPE_CHECKING:
+    from src.marketplace.storage.sqlite import SqliteRepository
 
 
 @pytest.fixture
@@ -47,7 +51,7 @@ def _commit_all(repo_path: Path, message: str = "update") -> None:
     subprocess.run(["git", "commit", "-m", message], cwd=repo_path, check=True)
 
 
-async def test_index_source_basic(db, source_repo: Path, tmp_path: Path) -> None:
+async def test_index_source_basic(db: SqliteRepository, source_repo: Path, tmp_path: Path) -> None:
     source = SourceRecord(
         id="src-1",
         name="my-source",
@@ -74,7 +78,9 @@ async def test_index_source_basic(db, source_repo: Path, tmp_path: Path) -> None
     assert updated_source.last_indexed_at is not None
 
 
-async def test_index_source_removes_deleted_plugin(db, source_repo: Path, tmp_path: Path) -> None:
+async def test_index_source_removes_deleted_plugin(
+    db: SqliteRepository, source_repo: Path, tmp_path: Path
+) -> None:
     source = SourceRecord(
         id="src-2",
         name="my-source2",
@@ -105,7 +111,9 @@ async def test_index_source_removes_deleted_plugin(db, source_repo: Path, tmp_pa
     assert "python-pro" in names_after
 
 
-async def test_index_source_updates_version_counter(db, source_repo: Path, tmp_path: Path) -> None:
+async def test_index_source_updates_version_counter(
+    db: SqliteRepository, source_repo: Path, tmp_path: Path
+) -> None:
     source = SourceRecord(
         id="src-3",
         name="my-source3",
