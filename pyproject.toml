@@ -1,0 +1,37 @@
+[project]
+name = "local-claude-marketplace"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.0.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.12",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=. --cov-report=term-missing"
+
+[tool.coverage.run]
+omit = ["tests/*", ".venv/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
