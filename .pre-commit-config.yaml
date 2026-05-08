@@ -9,3 +9,5 @@ repos:
     rev: v1.13.0
     hooks:
       - id: mypy
+        args: [--explicit-package-bases, --namespace-packages]
+        files: ^src/
