@@ -54,5 +54,5 @@ namespace_packages = true
 mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
 
 [[tool.mypy.overrides]]
-module = ["boto3.*", "botocore.*"]
+module = ["boto3.*", "botocore.*", "git.*"]
 ignore_missing_imports = true
