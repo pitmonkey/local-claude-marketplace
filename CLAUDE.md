@@ -18,8 +18,6 @@ uv run mypy src/                                               # type check
 
 | File | Role |
 |------|------|
-| `main.py` | Root shim — re-exports `app` from `src/marketplace/main.py` |
-| `config.py` | Placeholder — real config in `src/marketplace/config.py` |
 | `src/marketplace/main.py` | FastAPI app with lifespan startup |
 | `src/marketplace/config.py` | Settings dataclass, `get_settings()`, `load_repos_yaml()` |
 | `src/marketplace/api/marketplace.py` | `GET /marketplace.json` — plugin feed endpoint |
@@ -32,6 +30,10 @@ uv run mypy src/                                               # type check
 | `src/marketplace/storage/sqlite.py` | SQLite backend via async SQLAlchemy |
 | `src/marketplace/storage/s3.py` | S3 backend via boto3 |
 | `src/marketplace/templates/` | Jinja2 HTML templates |
+
+## Deployment
+
+For Docker, Kubernetes, and S3 backend setup, read `docs/deployment.md`.
 
 ## Code changes
 
