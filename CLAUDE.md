@@ -31,6 +31,29 @@ uv run mypy src/                                               # type check
 | `src/marketplace/storage/s3.py` | S3 backend via boto3 |
 | `src/marketplace/templates/` | Jinja2 HTML templates |
 
+## Scanner layouts
+
+`scanner.py` detects one of three layouts per source:
+
+| Layout | Trigger | What gets indexed |
+|--------|---------|-------------------|
+| `remote` | `ownership: remote` | Deep-walk entire tree; each `.md` is a plugin; sibling `skill.yaml` supplies rich metadata if present |
+| `flat` | `ownership: mine` + no subdirs with `skill.yaml` | Root-level `.md` files only; metadata from YAML frontmatter |
+| `proper` | `ownership: mine` + subdirs contain `skill.yaml` or `SKILL.md` | One subdir per plugin; `skill.yaml` for metadata + `SKILL.md` for content |
+
+Versioning: all layouts track a git file SHA per plugin. Counter increments on SHA change (`1.0.0 → 1.0.1`). `proper` layout can override with explicit `version` in `skill.yaml`.
+
+## Testing
+
+- `asyncio_mode = "auto"` in `pyproject.toml` — all test functions can be `async` without decorators
+- REST and UI tests use `fastapi.testclient.TestClient` (sync) — not `httpx.AsyncClient`
+- S3 tests use `moto[s3]` to mock AWS; no real credentials needed
+- `SqliteRepository` with an in-memory or tmp-path DB is the standard fixture for storage tests
+
+## Known constraints
+
+- **SQLite is single-writer** — do not run multiple replicas with `STORAGE_BACKEND=sqlite`; use `s3` backend for horizontal scaling
+
 ## Deployment
 
 For Docker, Kubernetes, and S3 backend setup, read `docs/deployment.md`.
