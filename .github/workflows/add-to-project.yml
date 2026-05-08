@@ -1,0 +1,12 @@
+name: Add Issue to Project
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-to-project:
+    uses: pitmonkey/.github/.github/workflows/add-issue-to-project.yml@main
+    with:
+      project-id: ${{ vars.ORG_PROJECT_ID }}
+    secrets: inherit

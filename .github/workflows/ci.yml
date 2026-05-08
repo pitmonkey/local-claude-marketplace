@@ -2,26 +2,39 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6.0.2
-      - uses: astral-sh/setup-uv@v8.0.0
-      - run: uv sync
-      - run: uv run pytest tests/ -v
+    uses: pitmonkey/.github/.github/workflows/test-python.yml@main
+    secrets: inherit
 
   lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6.0.2
-      - uses: astral-sh/setup-uv@v8.0.0
-      - run: uv sync
-      - run: uv run ruff check .
-      - run: uv run mypy .
+    uses: pitmonkey/.github/.github/workflows/lint-python.yml@main
+    secrets: inherit
 
-# TODO: add project-specific build and notify jobs
+  build:
+    needs: [test, lint]
+    uses: pitmonkey/.github/.github/workflows/build-docker.yml@main
+    with:
+      image-name: local-claude-marketplace
+      dockerhub-auth: ${{ github.actor != 'dependabot[bot]' }}
+      platforms: linux/amd64,linux/arm64
+    permissions:
+      contents: read
+      packages: write
+      actions: write
+    secrets: inherit
+
+  notify:
+    needs: [test, lint, build]
+    if: always() && github.actor != 'dependabot[bot]'
+    uses: pitmonkey/.github/.github/workflows/notify-slack.yml@main
+    with:
+      project-name: local-claude-marketplace
+      test-result: ${{ needs.test.result }}
+      lint-result: ${{ needs.lint.result }}
+      build-result: ${{ needs.build.result }}
+    secrets: inherit
