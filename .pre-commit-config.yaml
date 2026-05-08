@@ -11,3 +11,4 @@ repos:
       - id: mypy
         args: [--explicit-package-bases, --namespace-packages]
         files: ^src/
+        additional_dependencies: [types-PyYAML]
