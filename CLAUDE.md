@@ -45,10 +45,7 @@ Versioning: all layouts track a git file SHA per plugin. Counter increments on S
 
 ## Testing
 
-- `asyncio_mode = "auto"` in `pyproject.toml` — all test functions can be `async` without decorators
-- REST and UI tests use `fastapi.testclient.TestClient` (sync) — not `httpx.AsyncClient`
-- S3 tests use `moto[s3]` to mock AWS; no real credentials needed
-- `SqliteRepository` with an in-memory or tmp-path DB is the standard fixture for storage tests
+For test patterns, fixtures, and mocking setup, read `docs/testing.md`.
 
 ## Known constraints
 
