@@ -34,7 +34,7 @@ def _record_to_dict(record: object) -> dict[str, Any]:
     return result
 
 
-@router.get("/plugins")  # type: ignore[misc]
+@router.get("/plugins")
 async def list_plugins(
     request: Request,
     q: str | None = None,
@@ -52,7 +52,7 @@ async def list_plugins(
     return [_record_to_dict(plugin) for plugin in plugins]
 
 
-@router.get("/plugins/{name}")  # type: ignore[misc]
+@router.get("/plugins/{name}")
 async def get_plugin(request: Request, name: str) -> dict[str, Any]:
     """Get a single plugin by name."""
     repo: PluginRepository = request.app.state.repo
@@ -62,7 +62,7 @@ async def get_plugin(request: Request, name: str) -> dict[str, Any]:
     return _record_to_dict(plugin)
 
 
-@router.get("/sources")  # type: ignore[misc]
+@router.get("/sources")
 async def list_sources(request: Request) -> list[dict[str, Any]]:
     """List all sources."""
     repo: PluginRepository = request.app.state.repo
@@ -70,7 +70,7 @@ async def list_sources(request: Request) -> list[dict[str, Any]]:
     return [_record_to_dict(source) for source in sources]
 
 
-@router.post("/sources", status_code=201)  # type: ignore[misc]
+@router.post("/sources", status_code=201)
 async def create_source(request: Request, body: dict[str, str]) -> JSONResponse:
     """Create a new user-owned source."""
     repo: PluginRepository = request.app.state.repo
@@ -104,7 +104,7 @@ async def create_source(request: Request, body: dict[str, str]) -> JSONResponse:
     return JSONResponse(content=_record_to_dict(record), status_code=201)
 
 
-@router.delete("/sources/{id}")  # type: ignore[misc]
+@router.delete("/sources/{id}")
 async def delete_source(request: Request, id: str) -> Response:
     """Delete a user-owned source."""
     repo: PluginRepository = request.app.state.repo
@@ -117,7 +117,7 @@ async def delete_source(request: Request, id: str) -> Response:
     return Response(status_code=204)
 
 
-@router.post("/sources/{id}/reindex")  # type: ignore[misc]
+@router.post("/sources/{id}/reindex")
 async def reindex_source(request: Request, id: str) -> dict[str, int]:
     """Reindex a source."""
     repo: PluginRepository = request.app.state.repo

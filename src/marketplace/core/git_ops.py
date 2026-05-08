@@ -17,13 +17,13 @@ def pull_repo(repo_path: Path) -> str:
     """git pull --ff-only. Returns new HEAD sha."""
     repo = git.Repo(repo_path)
     repo.remotes.origin.pull(ff_only=True)
-    return repo.head.commit.hexsha  # type: ignore[no-any-return]
+    return str(repo.head.commit.hexsha)
 
 
 def get_repo_sha(repo_path: Path) -> str:
     """Returns current HEAD sha."""
     repo = git.Repo(repo_path)
-    return repo.head.commit.hexsha  # type: ignore[no-any-return]
+    return str(repo.head.commit.hexsha)
 
 
 def get_file_sha(repo_path: Path, file_path: str) -> str:

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.get("/marketplace.json")  # type: ignore[misc]
+@router.get("/marketplace.json")
 async def marketplace_json(request: Request) -> JSONResponse:
     """Return the marketplace schema with all public plugins."""
     repo: Any = request.app.state.repo
