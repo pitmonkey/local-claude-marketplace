@@ -1,0 +1,32 @@
+services:
+  marketplace:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+      - ./config:/config:ro
+    environment:
+      - DATA_DIR=/data
+      - CONFIG_DIR=/config
+      - PORT=8080
+      - STORAGE_BACKEND=sqlite
+      # S3 backend (uncomment and set STORAGE_BACKEND=s3 to use):
+      # - S3_ENDPOINT=http://rustfs:9000
+      # - S3_BUCKET=marketplace
+      # - S3_ACCESS_KEY=minioadmin
+      # - S3_SECRET_KEY=minioadmin
+
+  # Optional: MinIO for local S3-compatible storage
+  # Swap image for rustfs/rustfs if preferred
+  # minio:
+  #   image: minio/minio
+  #   command: server /data --console-address ":9001"
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   volumes:
+  #     - ./minio-data:/data
+  #   environment:
+  #     - MINIO_ROOT_USER=minioadmin
+  #     - MINIO_ROOT_PASSWORD=minioadmin

@@ -1,0 +1,30 @@
+# Claude Marketplace source repositories
+# Copy this file to config/repos.yaml and edit as needed.
+#
+# ownership: "remote" (default) — third-party repo, deep-walk for all .md files
+#            "mine"             — your own repo, use explicit format
+# format:    "auto" (default)  — auto-detect layout
+#            "flat"            — raw .md files at root
+#            "proper"          — subdirs with skill.yaml + SKILL.md
+
+repos:
+  # Community skills and agents (recommended starting point)
+  - url: https://github.com/VoltAgent/awesome-claude-code-subagents
+    name: awesome-claude-code-subagents
+    description: Community-contributed Claude Code skills and agents
+    ownership: remote
+    format: auto
+
+  # Example: your own flat skills repo
+  # - url: https://github.com/yourorg/your-skills
+  #   name: my-skills
+  #   description: Internal company skills
+  #   ownership: mine
+  #   format: flat
+
+  # Example: local filesystem repo (only works if mounted into the container)
+  # - url: /mnt/local-skills
+  #   name: local-internal
+  #   description: Local skills on this machine
+  #   ownership: mine
+  #   format: flat
