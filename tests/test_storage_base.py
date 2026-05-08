@@ -212,7 +212,7 @@ class TestPluginRepository:
             "delete_source",
         }
 
-        protocol_attrs = getattr(PluginRepository, "__protocol_attrs__", set())
+        protocol_attrs: set[str] = getattr(PluginRepository, "__protocol_attrs__", set())
         assert protocol_methods.issubset(protocol_attrs)
 
     def test_plugin_repository_structural_check(self) -> None:
