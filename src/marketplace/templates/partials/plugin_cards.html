@@ -1,0 +1,26 @@
+{% if not plugins %}
+<div class="text-center py-16 text-gray-500">
+  <p class="text-lg">No plugins found.</p>
+  <p class="text-sm mt-1">Try adjusting your search or filters.</p>
+</div>
+{% else %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for plugin in plugins %}
+  <a href="/plugins/{{ plugin.name }}" class="block bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-start justify-between mb-2">
+      <h2 class="text-sm font-semibold text-gray-900 truncate flex-1 mr-2">{{ plugin.name }}</h2>
+      {% if plugin.type == "skill" %}
+      <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">skill</span>
+      {% else %}
+      <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">subagent</span>
+      {% endif %}
+    </div>
+    <p class="text-sm text-gray-600 line-clamp-2 mb-3">{{ plugin.description }}</p>
+    <div class="flex items-center justify-between text-xs text-gray-400">
+      <span>v{{ plugin.version }}</span>
+      <span class="truncate ml-2">{{ plugin.source_id }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
