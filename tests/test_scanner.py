@@ -218,9 +218,9 @@ def test_remote_deep_walk(git_repo: Path) -> None:
     go_dir.mkdir()
 
     (py_dir / "python-pro.md").write_text(
-        "---\nname: python-pro\ndescription: Python\n---\nContent"
+        "---\nname: python-pro\ndescription: Python\n---\n" + "x" * 60
     )
-    (go_dir / "go-pro.md").write_text("---\nname: go-pro\ndescription: Go\n---\nContent")
+    (go_dir / "go-pro.md").write_text("---\nname: go-pro\ndescription: Go\n---\n" + "x" * 60)
     (git_repo / "README.md").write_text("# Readme")
     _commit_all(git_repo)
 
@@ -234,3 +234,106 @@ def test_remote_deep_walk(git_repo: Path) -> None:
     assert "go-pro" in names
     assert all(r.plugin_format == "flat" for r in records)
     assert all("categories/" in r.source_path for r in records)
+
+
+# ---------------------------------------------------------------------------
+# New scanner tests — validator integration
+# ---------------------------------------------------------------------------
+
+_LONG_BODY = "x" * 60
+
+
+def test_remote_walk_no_name_in_frontmatter_skipped(git_repo: Path) -> None:
+    """Remote file without a ``name`` in frontmatter must be skipped."""
+    (git_repo / "no-name.md").write_text("---\ndescription: No name here\n---\n" + _LONG_BODY)
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert records == []
+
+
+def test_remote_walk_no_frontmatter_skipped(git_repo: Path) -> None:
+    """Remote file with no frontmatter at all must be skipped."""
+    (git_repo / "bare.md").write_text("# Just markdown\n\n" + _LONG_BODY)
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert records == []
+
+
+def test_remote_walk_valid_frontmatter_indexed(git_repo: Path) -> None:
+    """Remote file with valid frontmatter and sufficient body is indexed."""
+    (git_repo / "good-skill.md").write_text(
+        "---\nname: good-skill\ndescription: A real skill\n---\n" + _LONG_BODY
+    )
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert len(records) == 1
+    assert records[0].name == "good-skill"
+    assert records[0].plugin_format == "flat"
+
+
+def test_remote_walk_model_field_indexed_as_subagent(git_repo: Path) -> None:
+    """Remote file with ``model:`` field is indexed and typed as ``subagent``."""
+    (git_repo / "my-agent.md").write_text(
+        "---\nname: my-agent\nmodel: claude-3-5-sonnet\n---\n" + _LONG_BODY
+    )
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert len(records) == 1
+    assert records[0].type == "subagent"
+
+
+def test_remote_walk_claude_md_skipped(git_repo: Path) -> None:
+    """``claude.md`` must be excluded by the updated skip list."""
+    (git_repo / "claude.md").write_text("---\nname: claude\n---\n" + _LONG_BODY)
+    (git_repo / "real-skill.md").write_text("---\nname: real-skill\n---\n" + _LONG_BODY)
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    names = {r.name for r in records}
+    assert "real-skill" in names
+    assert "claude" not in names
+
+
+def test_remote_walk_todo_md_skipped(git_repo: Path) -> None:
+    """``todo.md`` must be excluded by the updated skip list."""
+    (git_repo / "todo.md").write_text("---\nname: todo\n---\n" + _LONG_BODY)
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert records == []
+
+
+def test_scan_flat_no_frontmatter_name_uses_stem(git_repo: Path) -> None:
+    """``_scan_flat`` (ownership=mine) still indexes a file when there is no
+    frontmatter ``name`` — it falls back to the filename stem."""
+    (git_repo / "my-skill.md").write_text("# My skill\n\nNo frontmatter name.")
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="mine")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert len(records) == 1
+    assert records[0].name == "my-skill"

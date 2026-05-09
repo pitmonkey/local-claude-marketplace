@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await repo.init()
 
     # Load and upsert system repos from repos.yaml
-    system_sources = load_repos_yaml(settings.CONFIG_DIR)
+    system_sources = load_repos_yaml(settings.CONFIG_FILE)
     for source in system_sources:
         await repo.upsert_source(source)
 

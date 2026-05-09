@@ -7,23 +7,26 @@ import yaml
 
 from ..storage.base import PluginRecord, SourceRecord
 from .git_ops import get_file_sha
+from .validator import parse_frontmatter, validate_plugin_file
 
-_SKIP_FILES = {"readme.md", "changelog.md", "license.md", "contributing.md", "agents.md"}
+_SKIP_FILES = {
+    "readme.md",
+    "changelog.md",
+    "license.md",
+    "contributing.md",
+    "agents.md",
+    "claude.md",
+    "gemini.md",
+    "copilot-instructions.md",
+    "todo.md",
+    "roadmap.md",
+    "security.md",
+    "code_of_conduct.md",
+    "support.md",
+    "maintainers.md",
+    "codeowners.md",
+}
 _SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv"}
-
-
-def parse_frontmatter(content: str) -> dict[str, object]:
-    if not content.startswith("---"):
-        return {}
-    end = content.find("\n---", 3)
-    if end == -1:
-        return {}
-    raw = content[3:end].strip()
-    try:
-        result = yaml.safe_load(raw)
-        return result if isinstance(result, dict) else {}
-    except yaml.YAMLError:
-        return {}
 
 
 def detect_layout(repo_path: Path, ownership: str, format_hint: str) -> str:
@@ -43,13 +46,6 @@ def _find_skill_md(subdir: Path, name: str) -> Path | None:
             return candidate
     md_files = list(subdir.glob("*.md"))
     return md_files[0] if md_files else None
-
-
-def _infer_type(content: str, name: str) -> str:
-    combined = (content + name).lower()
-    if "subagent" in combined or "sub-agent" in combined:
-        return "subagent"
-    return "skill"
 
 
 def _build_record(
@@ -176,7 +172,8 @@ def _scan_flat(
         if not name:
             continue
         description = str(meta.get("description", ""))
-        plugin_type = str(meta.get("type", _infer_type(content, name)))
+        vr = validate_plugin_file(content, name)
+        plugin_type = str(meta.get("type", vr.plugin_type))
         source_path = md_file.name
         file_sha = get_file_sha(repo_path, source_path)
         counter, version = _resolve_version(existing_plugins, name, file_sha, None)
@@ -244,12 +241,14 @@ def _scan_remote(
                     author = str(meta_yaml.get("author", source.name))
                     plugin_type = str(meta_yaml.get("type", "skill"))
                 else:
+                    result = validate_plugin_file(content, entry.stem)
+                    if not result.valid:
+                        continue
                     plugin_format = "flat"
                     meta = parse_frontmatter(content)
-                    name_raw = meta.get("name")
-                    name = str(name_raw) if name_raw else entry.stem
+                    name = str(meta["name"])
                     description = str(meta.get("description", ""))
-                    plugin_type = str(meta.get("type", _infer_type(content, name)))
+                    plugin_type = result.plugin_type
                     tags = []
                     author = source.name
 

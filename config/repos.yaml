@@ -1,0 +1,9 @@
+
+repos:
+  # Community skills and agents (recommended starting point)
+  - url: https://github.com/VoltAgent/awesome-claude-code-subagents
+    name: awesome-claude-code-subagents
+    description: Community-contributed Claude Code skills and agents
+    ownership: remote
+    format: auto
+

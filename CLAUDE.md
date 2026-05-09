@@ -26,6 +26,7 @@ uv run mypy src/                                               # type check
 | `src/marketplace/core/sources.py` | Source indexing logic (clone/pull, scan, upsert) |
 | `src/marketplace/core/git_ops.py` | Git clone/pull/sha helpers |
 | `src/marketplace/core/scanner.py` | Repo scanner — discovers SKILL.md / agent manifest files |
+| `src/marketplace/core/validator.py` | Plugin file validator — `ValidationResult`, `validate_plugin_file()`, `parse_frontmatter()` |
 | `src/marketplace/storage/base.py` | `PluginRepository` protocol, `PluginRecord`, `SourceRecord` |
 | `src/marketplace/storage/sqlite.py` | SQLite backend via async SQLAlchemy |
 | `src/marketplace/storage/s3.py` | S3 backend via boto3 |
@@ -37,7 +38,7 @@ uv run mypy src/                                               # type check
 
 | Layout | Trigger | What gets indexed |
 |--------|---------|-------------------|
-| `remote` | `ownership: remote` | Deep-walk entire tree; each `.md` is a plugin; sibling `skill.yaml` supplies rich metadata if present |
+| `remote` | `ownership: remote` | Deep-walk entire tree; sibling `skill.yaml` supplies rich metadata; bare `.md` files must have YAML frontmatter with `name` + >50 char body or are skipped; common doc filenames (`claude.md`, `readme.md`, etc.) always skipped |
 | `flat` | `ownership: mine` + no subdirs with `skill.yaml` | Root-level `.md` files only; metadata from YAML frontmatter |
 | `proper` | `ownership: mine` + subdirs contain `skill.yaml` or `SKILL.md` | One subdir per plugin; `skill.yaml` for metadata + `SKILL.md` for content |
 

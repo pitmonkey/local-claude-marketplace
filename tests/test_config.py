@@ -28,7 +28,7 @@ class TestGetSettingsDefaults:
     def test_get_settings_defaults(self) -> None:
         with pytest.MonkeyPatch.context() as mp:
             mp.delenv("DATA_DIR", raising=False)
-            mp.delenv("CONFIG_DIR", raising=False)
+            mp.delenv("CONFIG_FILE", raising=False)
             mp.delenv("PORT", raising=False)
             mp.delenv("STORAGE_BACKEND", raising=False)
             mp.delenv("DB_PATH", raising=False)
@@ -40,7 +40,7 @@ class TestGetSettingsDefaults:
             settings = get_settings()
 
             assert Path("/data") == settings.DATA_DIR
-            assert Path("/config") == settings.CONFIG_DIR
+            assert Path("/config/repos.yaml") == settings.CONFIG_FILE
             assert settings.PORT == 8080
             assert settings.STORAGE_BACKEND == "sqlite"
             assert Path("/data/db/marketplace.db") == settings.DB_PATH
@@ -51,7 +51,7 @@ class TestGetSettingsDefaults:
 
     def test_get_settings_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DATA_DIR", "/custom/data")
-        monkeypatch.setenv("CONFIG_DIR", "/custom/config")
+        monkeypatch.setenv("CONFIG_FILE", "/custom/config/repos.yaml")
         monkeypatch.setenv("PORT", "9000")
         monkeypatch.setenv("STORAGE_BACKEND", "s3")
         monkeypatch.setenv("DB_PATH", "/custom/data/db/custom.db")
@@ -63,7 +63,7 @@ class TestGetSettingsDefaults:
         settings = get_settings()
 
         assert Path("/custom/data") == settings.DATA_DIR
-        assert Path("/custom/config") == settings.CONFIG_DIR
+        assert Path("/custom/config/repos.yaml") == settings.CONFIG_FILE
         assert settings.PORT == 9000
         assert settings.STORAGE_BACKEND == "s3"
         assert Path("/custom/data/db/custom.db") == settings.DB_PATH
@@ -103,8 +103,7 @@ class TestGetSettingsDefaults:
 class TestLoadReposYaml:
     def test_load_repos_yaml_missing_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir)
-            result = load_repos_yaml(config_dir)
+            result = load_repos_yaml(Path(tmpdir) / "repos.yaml")
             assert result == []
 
     def test_load_repos_yaml_parses_entries(self) -> None:
@@ -129,7 +128,7 @@ class TestLoadReposYaml:
             with open(repos_file, "w") as f:
                 yaml.dump(repos_data, f)
 
-            records = load_repos_yaml(config_dir)
+            records = load_repos_yaml(config_dir / "repos.yaml")
 
             assert len(records) == 2
             assert all(isinstance(r, SourceRecord) for r in records)
@@ -175,7 +174,7 @@ class TestLoadReposYaml:
             with open(repos_file, "w") as f:
                 yaml.dump(repos_data, f)
 
-            records = load_repos_yaml(config_dir)
+            records = load_repos_yaml(config_dir / "repos.yaml")
 
             assert len(records) == 1
             record = records[0]
@@ -201,8 +200,8 @@ class TestLoadReposYaml:
             with open(repos_file, "w") as f:
                 yaml.dump(repos_data, f)
 
-            records1 = load_repos_yaml(config_dir)
-            records2 = load_repos_yaml(config_dir)
+            records1 = load_repos_yaml(config_dir / "repos.yaml")
+            records2 = load_repos_yaml(config_dir / "repos.yaml")
 
             assert records1[0].id == records2[0].id
 
@@ -215,7 +214,7 @@ class TestLoadReposYaml:
             with open(repos_file, "w") as f:
                 yaml.dump(repos_data, f)
 
-            records = load_repos_yaml(config_dir)
+            records = load_repos_yaml(config_dir / "repos.yaml")
             assert records == []
 
     def test_load_repos_yaml_no_repos_key(self) -> None:
@@ -227,7 +226,7 @@ class TestLoadReposYaml:
             with open(repos_file, "w") as f:
                 yaml.dump(repos_data, f)
 
-            records = load_repos_yaml(config_dir)
+            records = load_repos_yaml(config_dir / "repos.yaml")
             assert records == []
 
     def test_load_repos_yaml_multiple_entries_different_ids(self) -> None:
@@ -250,6 +249,6 @@ class TestLoadReposYaml:
             with open(repos_file, "w") as f:
                 yaml.dump(repos_data, f)
 
-            records = load_repos_yaml(config_dir)
+            records = load_repos_yaml(config_dir / "repos.yaml")
 
             assert records[0].id != records[1].id

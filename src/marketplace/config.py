@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 import yaml
+from dotenv import load_dotenv
 
 from .storage.base import SourceRecord
 
@@ -15,7 +16,7 @@ _settings: Settings | None = None
 @dataclass
 class Settings:
     DATA_DIR: Path
-    CONFIG_DIR: Path
+    CONFIG_FILE: Path
     PORT: int
     STORAGE_BACKEND: str
     DB_PATH: Path
@@ -30,8 +31,10 @@ def get_settings() -> Settings:
     if _settings is not None:
         return _settings
 
+    load_dotenv(override=False)
+
     data_dir = Path(os.getenv("DATA_DIR", "/data"))
-    config_dir = Path(os.getenv("CONFIG_DIR", "/config"))
+    config_file = Path(os.getenv("CONFIG_FILE", "/config/repos.yaml"))
     port = int(os.getenv("PORT", "8080"))
     storage_backend = os.getenv("STORAGE_BACKEND", "sqlite")
     db_path = Path(os.getenv("DB_PATH", str(data_dir / "db" / "marketplace.db")))
@@ -42,7 +45,7 @@ def get_settings() -> Settings:
 
     _settings = Settings(
         DATA_DIR=data_dir,
-        CONFIG_DIR=config_dir,
+        CONFIG_FILE=config_file,
         PORT=port,
         STORAGE_BACKEND=storage_backend,
         DB_PATH=db_path,
@@ -59,13 +62,11 @@ def _reset_settings() -> None:
     _settings = None
 
 
-def load_repos_yaml(config_dir: Path) -> list[SourceRecord]:
-    repos_path = config_dir / "repos.yaml"
-
-    if not repos_path.exists():
+def load_repos_yaml(config_file: Path) -> list[SourceRecord]:
+    if not config_file.exists():
         return []
 
-    with open(repos_path) as f:
+    with open(config_file) as f:
         data = yaml.safe_load(f)
 
     if data is None or "repos" not in data:
