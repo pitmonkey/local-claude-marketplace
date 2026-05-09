@@ -10,10 +10,13 @@ Claude Code's marketplace protocol lets you add custom marketplace sources in se
 - **Aggregate community sources** — pull from `awesome-claude-code-subagents` and other public repos into one searchable index; git changes are tracked and converted to version updates automatically.
 - **Browse before you install** — read rendered skill docs, filter by type and tags, search by name.
 - **Own your index** — no dependency on any external service; runs entirely on your infrastructure.
+- **Versioned skills via git** — every reindex computes a file SHA; versions increment automatically when content changes, no manual tagging needed.
+
+**Limitation:** Skills and agents must be self-contained Markdown files. Plugins that depend on companion scripts or binaries are not supported.
 
 ## Quick Start
 
-Sources can be configured in `config/repos.yaml` or via the UI at runtime.
+Sources can be configured in `config/repos.yaml` or via the UI at runtime. By default the docker image comes bundles with the [VoltAgents](https://github.com/VoltAgent/awesome-claude-code-subagents)
 
 **Docker:**
 ```bash
