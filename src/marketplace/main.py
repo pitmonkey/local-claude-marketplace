@@ -11,7 +11,7 @@ from dulwich.repo import Repo as DulwichRepo
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 
-from .api.git_serve import create_git_wsgi_app
+from .api.git_serve import router as git_serve_router
 from .api.marketplace import router as marketplace_router
 from .api.plugin_serve import router as plugin_serve_router
 from .api.rest import router as rest_router
@@ -58,6 +58,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.data_dir = settings.DATA_DIR
     app.state.templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+    # Init dulwich plugin repo
+    plugin_repo_path = settings.DATA_DIR / "plugin_repo"
+    plugin_repo_path.mkdir(parents=True, exist_ok=True)
+    try:
+        DulwichRepo(str(plugin_repo_path))
+    except NotGitRepository:
+        r = DulwichRepo.init(str(plugin_repo_path))
+        r.refs.set_symbolic_ref(Ref(b"HEAD"), Ref(b"refs/heads/main"))
+    app.state.git_repo_path = plugin_repo_path
+
     async def _reindex_loop() -> None:
         try:
             while True:
@@ -82,17 +92,4 @@ app.include_router(marketplace_router)
 app.include_router(plugin_serve_router)
 app.include_router(rest_router)
 app.include_router(ui_router)
-
-# Mount git HTTP smart protocol server at construction time.
-# The plugin repo directory is created here so it exists before the first request.
-_settings = get_settings()
-_plugin_repo_path = _settings.DATA_DIR / "plugin_repo"
-_plugin_repo_path.mkdir(parents=True, exist_ok=True)
-
-try:
-    DulwichRepo(str(_plugin_repo_path))
-except NotGitRepository:
-    _dulwich_repo = DulwichRepo.init(str(_plugin_repo_path))
-    _dulwich_repo.refs.set_symbolic_ref(Ref(b"HEAD"), Ref(b"refs/heads/main"))
-
-app.mount("/git.git", create_git_wsgi_app(_plugin_repo_path))  # type: ignore[arg-type]
+app.include_router(git_serve_router)
