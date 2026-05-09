@@ -49,6 +49,7 @@ def app_with_repo(tmp_path: Path) -> FastAPI:
 
     app = FastAPI()
     app.state.repo = repo
+    app.state.git_repo_path = tmp_path / "plugin_repo"
     app.include_router(router)
     return app
 
