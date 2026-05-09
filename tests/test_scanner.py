@@ -337,3 +337,22 @@ def test_scan_flat_no_frontmatter_name_uses_stem(git_repo: Path) -> None:
     records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
     assert len(records) == 1
     assert records[0].name == "my-skill"
+
+
+def test_remote_walk_proper_format_uses_dir_source_path(git_repo: Path) -> None:
+    """Remote plugin with skill.yaml should store the directory path, not the .md file path."""
+    plugin_dir = git_repo / "skills" / "my-skill"
+    plugin_dir.mkdir(parents=True)
+    (plugin_dir / "skill.yaml").write_text("name: my-skill\ndescription: My skill\ntype: skill\n")
+    (plugin_dir / "SKILL.md").write_text("# My Skill\n\nContent here.")
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="remote")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    records = scan_repo(git_repo, source, get_repo_sha(git_repo), {})
+    assert len(records) == 1
+    r = records[0]
+    assert r.name == "my-skill"
+    assert r.plugin_format == "proper"
+    assert r.source_path == "skills/my-skill"  # directory, not SKILL.md file

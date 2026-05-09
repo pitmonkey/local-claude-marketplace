@@ -5,8 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "a2wsgi>=1.10.10",
     "aioboto3>=15.5.0",
     "aiosqlite>=0.22.1",
+    "dulwich>=1.0.0",
     "fastapi>=0.136.1",
     "gitpython>=3.1.50",
     "jinja2>=3.1.6",
@@ -55,4 +57,8 @@ namespace_packages = true
 
 [[tool.mypy.overrides]]
 module = ["boto3.*", "botocore.*", "fastapi.*", "git.*", "dotenv.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["a2wsgi.*", "dulwich.*"]
 ignore_missing_imports = true

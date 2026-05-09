@@ -5,10 +5,15 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dulwich.errors import NotGitRepository
+from dulwich.refs import Ref
+from dulwich.repo import Repo as DulwichRepo
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 
+from .api.git_serve import create_git_wsgi_app
 from .api.marketplace import router as marketplace_router
+from .api.plugin_serve import router as plugin_serve_router
 from .api.rest import router as rest_router
 from .api.ui import router as ui_router
 from .config import get_settings, load_repos_yaml
@@ -74,5 +79,20 @@ app = FastAPI(title="Claude Marketplace", lifespan=lifespan)
 
 # rest_router already carries prefix="/api" internally
 app.include_router(marketplace_router)
+app.include_router(plugin_serve_router)
 app.include_router(rest_router)
 app.include_router(ui_router)
+
+# Mount git HTTP smart protocol server at construction time.
+# The plugin repo directory is created here so it exists before the first request.
+_settings = get_settings()
+_plugin_repo_path = _settings.DATA_DIR / "plugin_repo"
+_plugin_repo_path.mkdir(parents=True, exist_ok=True)
+
+try:
+    DulwichRepo(str(_plugin_repo_path))
+except NotGitRepository:
+    _dulwich_repo = DulwichRepo.init(str(_plugin_repo_path))
+    _dulwich_repo.refs.set_symbolic_ref(Ref(b"HEAD"), Ref(b"refs/heads/main"))
+
+app.mount("/git.git", create_git_wsgi_app(_plugin_repo_path))  # type: ignore[arg-type]

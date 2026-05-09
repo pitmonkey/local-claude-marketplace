@@ -217,7 +217,6 @@ def _scan_remote(
                 if entry.name.lower() in _SKIP_FILES:
                     continue
                 rel = entry.relative_to(repo_path)
-                source_path = str(rel)
                 content = entry.read_text()
                 yaml_version: str | None = None
                 plugin_format: str
@@ -228,6 +227,7 @@ def _scan_remote(
                 yaml_file = entry.parent / "skill.yaml"
                 if yaml_file.exists():
                     plugin_format = "proper"
+                    source_path = str(entry.parent.relative_to(repo_path))
                     try:
                         raw_yaml = yaml.safe_load(yaml_file.read_text())
                     except yaml.YAMLError:
@@ -245,6 +245,7 @@ def _scan_remote(
                     if not result.valid:
                         continue
                     plugin_format = "flat"
+                    source_path = str(rel)
                     meta = parse_frontmatter(content)
                     name = str(meta["name"])
                     description = str(meta.get("description", ""))

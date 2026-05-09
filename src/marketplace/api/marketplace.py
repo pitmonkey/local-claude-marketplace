@@ -6,12 +6,12 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.get("/marketplace.json")
-async def marketplace_json(request: Request) -> JSONResponse:
-    """Return the marketplace schema with all public plugins."""
+async def _build_marketplace_response(request: Request) -> dict[str, Any]:
+    """Build the marketplace JSON response payload."""
     repo: Any = request.app.state.repo
     plugins = await repo.list_plugins()
 
+    base_url = str(request.base_url).rstrip("/")
     plugin_list = []
     for plugin in plugins:
         if not (
@@ -20,29 +20,37 @@ async def marketplace_json(request: Request) -> JSONResponse:
             continue
 
         category = "development" if plugin.type == "subagent" else "productivity"
-        base_url = str(request.base_url).rstrip("/")
-        homepage = f"{base_url}/plugins/{plugin.name}"
 
-        plugin_entry = {
+        plugin_entry: dict[str, Any] = {
             "name": plugin.name,
             "description": plugin.description,
+            "version": plugin.version,
             "category": category,
             "source": {
                 "source": "git-subdir",
-                "url": plugin.source_url,
-                "path": plugin.source_path,
+                "url": f"{base_url}/git.git",
+                "path": f"plugins/{plugin.name}",
                 "ref": "main",
                 "sha": plugin.repo_sha,
             },
-            "homepage": homepage,
+            "homepage": f"{base_url}/plugins/{plugin.name}",
         }
         plugin_list.append(plugin_entry)
 
-    response_data = {
-        "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+    return {
         "name": "local-claude-marketplace",
         "owner": {"name": "local"},
         "plugins": plugin_list,
     }
 
-    return JSONResponse(content=response_data)
+
+@router.get("/.claude-plugin/marketplace.json")
+async def marketplace_json_canonical(request: Request) -> JSONResponse:
+    """Return the marketplace feed at the canonical Claude Code path."""
+    return JSONResponse(content=await _build_marketplace_response(request))
+
+
+@router.get("/marketplace.json")
+async def marketplace_json_alias(request: Request) -> JSONResponse:
+    """Legacy alias — same payload as the canonical endpoint."""
+    return JSONResponse(content=await _build_marketplace_response(request))
