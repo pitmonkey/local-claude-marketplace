@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from src.marketplace.core.scanner import detect_layout, parse_frontmatter, scan_repo
+from src.marketplace.core.scanner import detect_layout, scan_repo
+from src.marketplace.core.validator import parse_frontmatter
 from src.marketplace.storage.base import PluginRecord, SourceRecord
 
 
