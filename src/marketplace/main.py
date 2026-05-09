@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -52,9 +53,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.data_dir = settings.DATA_DIR
     app.state.templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+    async def _reindex_loop() -> None:
+        try:
+            while True:
+                await asyncio.sleep(3600)
+                await index_all_sources(repo, settings.DATA_DIR)
+        except asyncio.CancelledError:
+            pass
+
+    reindex_task = asyncio.create_task(_reindex_loop())
+
     yield
 
-    # Shutdown: nothing to do (aiosqlite closes on GC, boto3 is sync)
+    # Shutdown: cancel the periodic reindex task, then wait for it to finish.
+    reindex_task.cancel()
+    await asyncio.gather(reindex_task, return_exceptions=True)
 
 
 app = FastAPI(title="Claude Marketplace", lifespan=lifespan)
