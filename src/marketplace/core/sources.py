@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from ..storage.base import PluginRecord, PluginRepository, SourceRecord
 from .git_ops import clone_repo, get_repo_sha, pull_repo
+from .plugin_repo import rebuild_plugin_repo
 from .scanner import scan_repo
 
 
@@ -42,11 +43,18 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
 
 
 async def index_all_sources(repo: PluginRepository, data_dir: Path) -> dict[str, int]:
-    """Index every source sequentially. Returns mapping of source name to plugin count."""
+    """Index every source sequentially, then rebuild the plugin git repo.
+
+    Returns mapping of source name to plugin count.
+    """
     sources = await repo.list_sources()
     results: dict[str, int] = {}
     for source in sources:
         results[source.name] = await index_source(source, repo, data_dir)
+
+    all_plugins = await repo.list_plugins()
+    rebuild_plugin_repo(all_plugins, data_dir / "plugin_repo")
+
     return results
 
 

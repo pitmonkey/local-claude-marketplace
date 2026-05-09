@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dulwich.errors import NotGitRepository
+from dulwich.refs import Ref
+from dulwich.repo import Repo as DulwichRepo
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 
+from .api.git_serve import router as git_serve_router
 from .api.marketplace import router as marketplace_router
+from .api.plugin_serve import router as plugin_serve_router
 from .api.rest import router as rest_router
 from .api.ui import router as ui_router
 from .config import get_settings, load_repos_yaml
@@ -40,7 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await repo.init()
 
     # Load and upsert system repos from repos.yaml
-    system_sources = load_repos_yaml(settings.CONFIG_DIR)
+    system_sources = load_repos_yaml(settings.CONFIG_FILE)
     for source in system_sources:
         await repo.upsert_source(source)
 
@@ -52,14 +58,38 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.data_dir = settings.DATA_DIR
     app.state.templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
+    # Init dulwich plugin repo
+    plugin_repo_path = settings.DATA_DIR / "plugin_repo"
+    plugin_repo_path.mkdir(parents=True, exist_ok=True)
+    try:
+        DulwichRepo(str(plugin_repo_path))
+    except NotGitRepository:
+        r = DulwichRepo.init(str(plugin_repo_path))
+        r.refs.set_symbolic_ref(Ref(b"HEAD"), Ref(b"refs/heads/main"))
+    app.state.git_repo_path = plugin_repo_path
+
+    async def _reindex_loop() -> None:
+        try:
+            while True:
+                await asyncio.sleep(3600)
+                await index_all_sources(repo, settings.DATA_DIR)
+        except asyncio.CancelledError:
+            pass
+
+    reindex_task = asyncio.create_task(_reindex_loop())
+
     yield
 
-    # Shutdown: nothing to do (aiosqlite closes on GC, boto3 is sync)
+    # Shutdown: cancel the periodic reindex task, then wait for it to finish.
+    reindex_task.cancel()
+    await asyncio.gather(reindex_task, return_exceptions=True)
 
 
 app = FastAPI(title="Claude Marketplace", lifespan=lifespan)
 
 # rest_router already carries prefix="/api" internally
 app.include_router(marketplace_router)
+app.include_router(plugin_serve_router)
 app.include_router(rest_router)
 app.include_router(ui_router)
+app.include_router(git_serve_router)

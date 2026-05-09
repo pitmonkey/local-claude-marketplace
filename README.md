@@ -10,19 +10,32 @@ Claude Code's marketplace protocol lets you add custom marketplace sources in se
 - **Aggregate community sources** — pull from `awesome-claude-code-subagents` and other public repos into one searchable index; git changes are tracked and converted to version updates automatically.
 - **Browse before you install** — read rendered skill docs, filter by type and tags, search by name.
 - **Own your index** — no dependency on any external service; runs entirely on your infrastructure.
+- **Versioned skills via git** — every reindex computes a file SHA; versions increment automatically when content changes, no manual tagging needed.
+
+**Limitation:** Skills and agents must be self-contained Markdown files. Plugins that depend on companion scripts or binaries are not supported.
 
 ## Quick Start
 
+Sources can be configured in `config/repos.yaml` or via the UI at runtime. By default the docker image comes bundles with the [VoltAgents](https://github.com/VoltAgent/awesome-claude-code-subagents)
+
+**Docker:**
 ```bash
-# 1. Configure your sources
-cp config/repos.yaml.example config/repos.yaml
-# Edit config/repos.yaml to add the repos you want to index
+# 1. Edit config/repos.yaml to add the repos you want to index (one is included by default)
 
 # 2. Start the server
 docker compose up --build
 
 # 3. Open the web UI
 open http://localhost:8080
+```
+
+**Local (uv):**
+```bash
+# 1. Edit config/repos.yaml if needed, then:
+uv run uvicorn src.marketplace.main:app --host 0.0.0.0 --port 8080 --reload
+
+# 2. Open the web UI
+open http://127.0.0.1:8080
 ```
 
 ## Add to Claude Code
@@ -92,14 +105,14 @@ repos:
     format: flat        # flat = .md files at repo root
 ```
 
-See `config/repos.yaml.example` for all options.
+Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options for reference.
 
 ### Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
 | `DATA_DIR` | `/data` | Persistent data root — git clones and DB |
-| `CONFIG_DIR` | `/config` | Directory containing `repos.yaml` |
+| `CONFIG_FILE` | `/config/repos.yaml` | Path to `repos.yaml` |
 | `PORT` | `8080` | HTTP listen port |
 | `STORAGE_BACKEND` | `sqlite` | `sqlite` or `s3` |
 | `DB_PATH` | `$DATA_DIR/db/marketplace.db` | SQLite DB path |

@@ -46,5 +46,8 @@ ehthumbs.db
 Thumbs.db
 
 # Claude Code local settings
-.claude/settings.local.json
-.claude/agents/
+.claude/*
+
+# local db
+data/
+

@@ -8,7 +8,7 @@ services:
       - ./config:/config:ro
     environment:
       - DATA_DIR=/data
-      - CONFIG_DIR=/config
+      - CONFIG_FILE=/config/repos.yaml
       - PORT=8080
       - STORAGE_BACKEND=sqlite
       # S3 backend (uncomment and set STORAGE_BACKEND=s3 to use):

@@ -7,7 +7,7 @@ docker build -t local-claude-marketplace .
 ```
 
 The image:
-- Base: `python:3.12-slim` + `git`
+- Base: `python:3.14-slim` + `git`
 - Installs deps via `uv sync --no-dev --frozen`
 - Exposes port `8080`
 - Entry: `uvicorn src.marketplace.main:app --host 0.0.0.0 --port 8080`
@@ -17,9 +17,7 @@ The image:
 ## Local / single-host (docker compose)
 
 ```bash
-cp config/repos.yaml.example config/repos.yaml
-# edit config/repos.yaml to add your sources
-
+# edit config/repos.yaml to add your sources (one community source is included by default)
 docker compose up -d
 ```
 
@@ -34,7 +32,7 @@ The compose file mounts:
 | Variable | Default | Notes |
 |---|---|---|
 | `DATA_DIR` | `/data` | Persistent data root (DB + clones) |
-| `CONFIG_DIR` | `/config` | Contains `repos.yaml` |
+| `CONFIG_FILE` | `/config/repos.yaml` | Path to `repos.yaml` |
 | `PORT` | `8080` | Uvicorn listen port |
 | `STORAGE_BACKEND` | `sqlite` | `sqlite` or `s3` |
 | `DB_PATH` | `$DATA_DIR/db/marketplace.db` | SQLite only |
@@ -100,8 +98,8 @@ spec:
           env:
             - name: DATA_DIR
               value: /data
-            - name: CONFIG_DIR
-              value: /config
+            - name: CONFIG_FILE
+              value: /config/repos.yaml
             - name: STORAGE_BACKEND
               value: sqlite
           volumeMounts:

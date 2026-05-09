@@ -18,7 +18,7 @@ def _make_plugin(
     type: str = "skill",
     description: str = "A test plugin",
     source_url: str = "https://github.com/example/repo",
-    source_path: str = "plugins/test-plugin/SKILL.md",
+    source_path: str = "plugins/test-plugin",
     repo_sha: str = "abc123def456",
 ) -> PluginRecord:
     return PluginRecord(
@@ -49,17 +49,29 @@ def app_with_repo(tmp_path: Path) -> FastAPI:
 
     app = FastAPI()
     app.state.repo = repo
+    app.state.git_repo_path = tmp_path / "plugin_repo"
     app.include_router(router)
     return app
 
 
 def test_marketplace_json_has_required_fields(app_with_repo: FastAPI) -> None:
     client = TestClient(app_with_repo)
+    response = client.get("/.claude-plugin/marketplace.json")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "name" in data
+    assert "owner" in data
+    assert "plugins" in data
+
+
+def test_marketplace_json_alias_also_works(app_with_repo: FastAPI) -> None:
+    """Legacy /marketplace.json alias must return the same payload."""
+    client = TestClient(app_with_repo)
     response = client.get("/marketplace.json")
     assert response.status_code == 200
 
     data = response.json()
-    assert "$schema" in data
     assert "name" in data
     assert "owner" in data
     assert "plugins" in data
@@ -76,7 +88,7 @@ def test_marketplace_json_excludes_local_plugins(app_with_repo: FastAPI) -> None
     )
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(local_plugin))
 
-    response = client.get("/marketplace.json")
+    response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
 
     data = response.json()
@@ -101,7 +113,7 @@ def test_marketplace_json_includes_http_plugins(app_with_repo: FastAPI) -> None:
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(https_plugin))
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(http_plugin))
 
-    response = client.get("/marketplace.json")
+    response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
 
     data = response.json()
@@ -111,7 +123,7 @@ def test_marketplace_json_includes_http_plugins(app_with_repo: FastAPI) -> None:
 
 
 def test_marketplace_json_plugin_fields(app_with_repo: FastAPI) -> None:
-    """Verify plugin fields in response."""
+    """Verify plugin fields in response match the correct Claude Code protocol format."""
     client = TestClient(app_with_repo)
     repo = app_with_repo.state.repo
 
@@ -120,12 +132,12 @@ def test_marketplace_json_plugin_fields(app_with_repo: FastAPI) -> None:
         type="skill",
         description="A useful skill",
         source_url="https://github.com/example/repo",
-        source_path="skills/test-skill/SKILL.md",
+        source_path="skills/test-skill",
         repo_sha="sha123456",
     )
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
 
-    response = client.get("/marketplace.json")
+    response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
 
     data = response.json()
@@ -136,10 +148,10 @@ def test_marketplace_json_plugin_fields(app_with_repo: FastAPI) -> None:
     assert p["name"] == "test-skill"
     assert p["description"] == "A useful skill"
     assert p["category"] == "productivity"
-    assert p["source"]["url"] == "https://github.com/example/repo"
-    assert p["source"]["sha"] == "sha123456"
-    assert p["source"]["path"] == "skills/test-skill/SKILL.md"
+    assert p["version"] == "1.0.0"
     assert p["source"]["source"] == "git-subdir"
+    assert "git.git" in p["source"]["url"]
+    assert p["source"]["path"] == "plugins/test-skill"
     assert p["source"]["ref"] == "main"
     assert "homepage" in p
 
@@ -155,7 +167,7 @@ def test_marketplace_json_category_mapping(app_with_repo: FastAPI) -> None:
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(skill))
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(subagent))
 
-    response = client.get("/marketplace.json")
+    response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
 
     data = response.json()
@@ -173,7 +185,7 @@ def test_homepage_url_uses_request_host(app_with_repo: FastAPI) -> None:
     plugin = _make_plugin(name="test-plugin")
     asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
 
-    response = client.get("/marketplace.json")
+    response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
 
     data = response.json()
@@ -183,3 +195,36 @@ def test_homepage_url_uses_request_host(app_with_repo: FastAPI) -> None:
     homepage = plugins[0]["homepage"]
     assert homepage.startswith("http://")
     assert "/plugins/test-plugin" in homepage
+
+
+def test_marketplace_json_includes_flat_plugins(app_with_repo: FastAPI) -> None:
+    """Flat-format plugins are served virtually so must be included."""
+    client = TestClient(app_with_repo)
+    repo = app_with_repo.state.repo
+
+    flat_plugin = PluginRecord(
+        name="flat-plugin",
+        version="1.0.0",
+        type="skill",
+        description="A flat plugin",
+        tags=[],
+        author="tester",
+        source_id="src-1",
+        source_url="https://github.com/example/repo",
+        source_path="categories/flat-plugin.md",
+        plugin_format="flat",
+        source_ownership="remote",
+        content="# Flat",
+        repo_sha="abc",
+        file_sha="xyz",
+        version_counter=0,
+        updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+    )
+    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(flat_plugin))
+
+    response = client.get("/.claude-plugin/marketplace.json")
+    assert response.status_code == 200
+
+    data = response.json()
+    plugin_names = [p["name"] for p in data["plugins"]]
+    assert "flat-plugin" in plugin_names
