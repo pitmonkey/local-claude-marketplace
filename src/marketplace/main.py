@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,6 +23,14 @@ from .core.sources import index_all_sources
 from .storage.base import PluginRepository
 from .storage.s3 import S3Repository
 from .storage.sqlite import SqliteRepository
+
+_log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, _log_level, logging.INFO),
+    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -51,7 +61,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await repo.upsert_source(source)
 
     # Index all sources
+    logger.info("Startup indexing starting")
     await index_all_sources(repo, settings.DATA_DIR)
+    logger.info("Startup indexing complete")
 
     # Store on app state for routes
     app.state.repo = repo
@@ -72,9 +84,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         try:
             while True:
                 await asyncio.sleep(3600)
-                await index_all_sources(repo, settings.DATA_DIR)
+                logger.info("Periodic reindex starting")
+                try:
+                    await index_all_sources(repo, settings.DATA_DIR)
+                    logger.info("Periodic reindex complete")
+                except Exception:
+                    logger.exception("Periodic reindex failed unexpectedly")
         except asyncio.CancelledError:
-            pass
+            logger.info("Reindex loop cancelled (shutdown)")
 
     reindex_task = asyncio.create_task(_reindex_loop())
 
