@@ -366,3 +366,37 @@ async def test_add_user_source_default_requires_auth_is_false(
     )
 
     assert record.requires_auth is False
+
+
+async def test_add_user_source_rolls_back_on_index_failure(tmp_path: Path) -> None:
+    """add_user_source rolls back the source record when index_source raises."""
+    from unittest.mock import AsyncMock, patch
+
+    from src.marketplace.storage.sqlite import SqliteRepository
+
+    db = SqliteRepository(tmp_path / "test_rollback.db")
+    await db.init()
+
+    data_dir = tmp_path / "data_rollback"
+    data_dir.mkdir()
+
+    with (
+        patch(
+            "src.marketplace.core.sources.index_source",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("git clone failed"),
+        ),
+        pytest.raises(RuntimeError, match="git clone failed"),
+    ):
+        await add_user_source(
+            repo=db,
+            data_dir=data_dir,
+            url="https://example.com/repo.git",
+            name="failing-source",
+            description="Will fail",
+            ownership="mine",
+            fmt="flat",
+        )
+
+    sources = await db.list_sources()
+    assert sources == []

@@ -112,22 +112,36 @@ def _scan_proper(
         if not subdir.is_dir():
             continue
         yaml_file = subdir / "skill.yaml"
-        if not yaml_file.exists():
-            continue
-        try:
-            raw_yaml = yaml.safe_load(yaml_file.read_text())
-        except yaml.YAMLError:
-            continue
-        meta: dict[str, object] = raw_yaml if isinstance(raw_yaml, dict) else {}
-        name = str(meta.get("name", subdir.name))
-        yaml_version = str(meta["version"]) if "version" in meta else None
-        description = str(meta.get("description", ""))
-        raw_tags = meta.get("tags", [])
-        tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
-        author = str(meta.get("author", source.name))
-        plugin_type = str(meta.get("type", "skill"))
+        skill_md_file = subdir / "SKILL.md"
+        yaml_version: str | None = None
 
-        md_file = _find_skill_md(subdir, name)
+        if yaml_file.exists():
+            try:
+                raw_yaml = yaml.safe_load(yaml_file.read_text())
+            except yaml.YAMLError:
+                continue
+            meta: dict[str, object] = raw_yaml if isinstance(raw_yaml, dict) else {}
+            name = str(meta.get("name", subdir.name))
+            yaml_version = str(meta["version"]) if "version" in meta else None
+            description = str(meta.get("description", ""))
+            raw_tags = meta.get("tags", [])
+            tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
+            author = str(meta.get("author", source.name))
+            plugin_type = str(meta.get("type", "skill"))
+            md_file = _find_skill_md(subdir, name)
+        elif skill_md_file.exists():
+            fm = parse_frontmatter(skill_md_file.read_text())
+            meta = dict(fm)
+            name = str(meta.get("name", subdir.name))
+            description = str(meta.get("description", ""))
+            raw_tags = meta.get("tags", [])
+            tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
+            author = str(meta.get("author", source.name))
+            plugin_type = str(meta.get("type", "skill"))
+            md_file = skill_md_file
+        else:
+            continue
+
         if md_file is None:
             continue
         content = md_file.read_text()

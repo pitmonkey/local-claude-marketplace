@@ -31,6 +31,7 @@ def _source_from_dict(data: dict[str, Any]) -> SourceRecord:
     if data.get("last_indexed_at") is not None:
         data["last_indexed_at"] = datetime.fromisoformat(data["last_indexed_at"])
     data.setdefault("requires_auth", False)
+    data.setdefault("subpath", None)
     return SourceRecord(**data)
 
 

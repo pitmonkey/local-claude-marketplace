@@ -85,6 +85,7 @@ async def create_source(request: Request, body: dict[str, Any]) -> JSONResponse:
     requires_auth = (
         raw_auth.lower() in ("true", "1", "yes") if isinstance(raw_auth, str) else bool(raw_auth)
     )
+    subpath = body.get("subpath") or None
 
     if not all([url, name, description, ownership, fmt]):
         raise HTTPException(status_code=400, detail="Missing required fields")
@@ -95,16 +96,20 @@ async def create_source(request: Request, body: dict[str, Any]) -> JSONResponse:
     assert ownership is not None
     assert fmt is not None
 
-    record = await add_user_source(
-        repo=repo,
-        data_dir=data_dir,
-        url=url,
-        name=name,
-        description=description,
-        ownership=ownership,
-        fmt=fmt,
-        requires_auth=requires_auth,
-    )
+    try:
+        record = await add_user_source(
+            repo=repo,
+            data_dir=data_dir,
+            url=url,
+            name=name,
+            description=description,
+            ownership=ownership,
+            fmt=fmt,
+            requires_auth=requires_auth,
+            subpath=subpath,
+        )
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return JSONResponse(content=_record_to_dict(record), status_code=201)
 
@@ -132,5 +137,8 @@ async def reindex_source(request: Request, id: str) -> dict[str, int]:
     if source is None:
         raise HTTPException(status_code=404, detail=f"Source {id!r} not found")
 
-    count = await index_source(source, repo, data_dir)
+    try:
+        count = await index_source(source, repo, data_dir)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"indexed": count}

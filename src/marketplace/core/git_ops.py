@@ -107,7 +107,7 @@ def get_repo_sha(repo_path: Path) -> str:
 
 def get_file_sha(repo_path: Path, file_path: str) -> str:
     """SHA of the last commit that touched file_path. Returns '' if file has no commits yet."""
-    repo = git.Repo(repo_path)
+    repo = git.Repo(repo_path, search_parent_directories=True)
     try:
         result = cast(str, repo.git.log("-1", "--format=%H", "--", file_path))
         return result

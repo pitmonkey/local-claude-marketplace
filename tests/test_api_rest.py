@@ -395,3 +395,49 @@ async def test_create_source_without_requires_auth_defaults_false(
     assert response.status_code == 201
     data = response.json()
     assert data["requires_auth"] is False
+
+
+async def test_create_source_returns_400_on_runtime_error(
+    repo: SqliteRepository, app: FastAPI, client: TestClient
+) -> None:
+    """POST /api/sources returns 400 when add_user_source raises RuntimeError."""
+    from unittest.mock import AsyncMock, patch
+
+    with patch(
+        "src.marketplace.api.rest.add_user_source",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("GIT_AUTH_TOKEN not set"),
+    ):
+        response = client.post(
+            "/api/sources",
+            json={
+                "url": "https://example.com/repo.git",
+                "name": "failing-source",
+                "description": "Will fail",
+                "ownership": "mine",
+                "format": "flat",
+            },
+        )
+
+    assert response.status_code == 400
+    assert "GIT_AUTH_TOKEN not set" in response.json()["detail"]
+
+
+async def test_reindex_source_returns_400_on_runtime_error(
+    repo: SqliteRepository, app: FastAPI, client: TestClient
+) -> None:
+    """POST /api/sources/{id}/reindex returns 400 when index_source raises RuntimeError."""
+    from unittest.mock import AsyncMock, patch
+
+    source = _make_source(id="src-err")
+    await repo.upsert_source(source)
+
+    with patch(
+        "src.marketplace.api.rest.index_source",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("clone failed"),
+    ):
+        response = client.post("/api/sources/src-err/reindex")
+
+    assert response.status_code == 400
+    assert "clone failed" in response.json()["detail"]

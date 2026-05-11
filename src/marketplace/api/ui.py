@@ -102,6 +102,7 @@ async def add_source(
     ownership: str = Form(...),
     format: str = Form(...),
     requires_auth: str = Form(default=""),
+    subpath: str = Form(default=""),
 ) -> RedirectResponse:
     """Handle Add Source form submission."""
     repo: PluginRepository = request.app.state.repo
@@ -117,8 +118,9 @@ async def add_source(
             ownership=ownership,
             fmt=format,
             requires_auth=requires_auth.lower() == "true",
+            subpath=subpath or None,
         )
-    except ValueError as exc:
+    except (ValueError, RuntimeError) as exc:
         return RedirectResponse(f"/sources?error={exc}", status_code=303)
 
     return RedirectResponse("/sources", status_code=303)
@@ -140,6 +142,9 @@ async def reindex_source(request: Request, id: str) -> RedirectResponse:
 
     source = await repo.get_source(id)
     if source is not None:
-        await index_source(source, repo, data_dir)
+        try:
+            await index_source(source, repo, data_dir)
+        except (ValueError, RuntimeError) as exc:
+            return RedirectResponse(f"/sources?error={exc}", status_code=303)
 
     return RedirectResponse("/sources", status_code=303)
