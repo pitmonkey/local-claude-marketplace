@@ -159,3 +159,41 @@ async def test_upsert_is_idempotent(repo: S3Repository) -> None:
     results = await repo.list_plugins()
     assert len(results) == 1
     assert repo._index["plugins"].count(plugin.name) == 1
+
+
+async def test_source_from_dict_missing_requires_auth_defaults_false(repo: S3Repository) -> None:
+    """_source_from_dict handles missing requires_auth key and defaults to False."""
+    from src.marketplace.storage.s3 import _source_from_dict
+
+    data = {
+        "id": "src-old",
+        "name": "Old Source",
+        "url": "https://github.com/example/repo",
+        "description": "desc",
+        "ownership": "remote",
+        "format": "flat",
+        "is_system": False,
+        "last_indexed_at": None,
+        # requires_auth intentionally absent (old serialised record)
+    }
+    record = _source_from_dict(data)
+    assert record.requires_auth is False
+
+
+async def test_source_requires_auth_roundtrip(repo: S3Repository) -> None:
+    """SourceRecord with requires_auth=True is stored and retrieved correctly via S3."""
+    source = SourceRecord(
+        id="auth-s3-1",
+        name="Private Source",
+        url="https://github.com/example/private",
+        description="Private",
+        ownership="mine",
+        format="flat",
+        is_system=False,
+        last_indexed_at=None,
+        requires_auth=True,
+    )
+    await repo.upsert_source(source)
+    result = await repo.get_source("auth-s3-1")
+    assert result is not None
+    assert result.requires_auth is True

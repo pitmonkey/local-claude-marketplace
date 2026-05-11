@@ -101,6 +101,7 @@ async def add_source(
     description: str = Form(...),
     ownership: str = Form(...),
     format: str = Form(...),
+    requires_auth: str = Form(default=""),
 ) -> RedirectResponse:
     """Handle Add Source form submission."""
     repo: PluginRepository = request.app.state.repo
@@ -115,6 +116,7 @@ async def add_source(
             description=description,
             ownership=ownership,
             fmt=format,
+            requires_auth=requires_auth.lower() == "true",
         )
     except ValueError as exc:
         return RedirectResponse(f"/sources?error={exc}", status_code=303)

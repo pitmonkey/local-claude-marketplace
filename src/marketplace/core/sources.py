@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -13,10 +14,18 @@ from .scanner import scan_repo
 async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: Path) -> int:
     """Clone or pull source repo, scan for plugins, upsert/delete in DB. Returns upsert count."""
     repo_path = data_dir / "repos" / source.name
+    token: str | None = None
+    if source.requires_auth:
+        token = os.environ.get("GIT_AUTH_TOKEN")
+        if not token:
+            raise RuntimeError(
+                f"Source {source.name!r} requires auth but GIT_AUTH_TOKEN is not set"
+            )
+
     if repo_path.exists():
-        pull_repo(repo_path)
+        pull_repo(repo_path, token=token)
     else:
-        clone_repo(source.url, repo_path)
+        clone_repo(source.url, repo_path, token=token)
 
     repo_sha = get_repo_sha(repo_path)
 
@@ -66,6 +75,7 @@ async def add_user_source(
     description: str,
     ownership: str,
     fmt: str,
+    requires_auth: bool = False,
 ) -> SourceRecord:
     """Create a user-owned source, persist it, index it, and return the record."""
     record = SourceRecord(
@@ -76,6 +86,7 @@ async def add_user_source(
         ownership=ownership,
         format=fmt,
         is_system=False,
+        requires_auth=requires_auth,
     )
     await repo.upsert_source(record)
     await index_source(record, repo, data_dir)

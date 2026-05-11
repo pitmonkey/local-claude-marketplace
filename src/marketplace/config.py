@@ -83,6 +83,7 @@ def load_repos_yaml(config_file: Path) -> list[SourceRecord]:
             format=entry.get("format", "auto"),
             is_system=True,
             last_indexed_at=None,
+            requires_auth=bool(entry.get("requires_auth", False)),
         )
         records.append(record)
 

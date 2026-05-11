@@ -25,9 +25,9 @@ uv run mypy src/                                               # type check
 | `src/marketplace/api/git_serve.py` | Git HTTP smart protocol at `/git.git` via dulwich — Claude Code clones this to install plugins |
 | `src/marketplace/api/rest.py` | REST API under `/api` prefix (plugins, sources CRUD) |
 | `src/marketplace/api/ui.py` | Server-rendered HTML routes (Jinja2 + HTMX) |
-| `src/marketplace/core/sources.py` | Source indexing logic (clone/pull, scan, upsert); calls `rebuild_plugin_repo` after each full index |
+| `src/marketplace/core/sources.py` | Source indexing logic (clone/pull, scan, upsert); reads `GIT_AUTH_TOKEN` env var for `requires_auth` sources; calls `rebuild_plugin_repo` after each full index |
 | `src/marketplace/core/plugin_repo.py` | Writes plugin files to `data/plugin_repo/` and commits via dulwich — git repo Claude Code clones |
-| `src/marketplace/core/git_ops.py` | Git clone/pull/sha helpers |
+| `src/marketplace/core/git_ops.py` | Git clone/pull/sha helpers; `_inject_token()` injects PAT into HTTPS URLs ephemerally |
 | `src/marketplace/core/scanner.py` | Repo scanner — discovers SKILL.md / agent manifest files |
 | `src/marketplace/core/validator.py` | Plugin file validator — `ValidationResult`, `validate_plugin_file()`, `parse_frontmatter()` |
 | `src/marketplace/storage/base.py` | `PluginRepository` protocol, `PluginRecord`, `SourceRecord` |
@@ -54,6 +54,7 @@ For test patterns, fixtures, and mocking setup, read `docs/testing.md`.
 ## Known constraints
 
 - **SQLite is single-writer** — do not run multiple replicas with `STORAGE_BACKEND=sqlite`; use `s3` backend for horizontal scaling
+- **Private repos** — set `requires_auth: true` on a source and supply `GIT_AUTH_TOKEN` at runtime; token is injected into the HTTPS URL at clone/pull time and never stored
 
 ## Deployment
 

@@ -105,7 +105,7 @@ repos:
     format: flat        # flat = .md files at repo root
 ```
 
-Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options for reference.
+Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options for reference. For private repos, set `requires_auth: true` on the source and supply `GIT_AUTH_TOKEN` at runtime — the token is injected ephemerally at clone/pull time and never written to disk or config.
 
 ### Environment variables
 
@@ -120,6 +120,7 @@ Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options
 | `S3_BUCKET` | `marketplace` | S3 bucket name |
 | `S3_ACCESS_KEY` | — | S3 credentials |
 | `S3_SECRET_KEY` | — | S3 credentials |
+| `GIT_AUTH_TOKEN` | — | PAT for sources with `requires_auth: true` — never stored, injected at clone/pull time |
 
 ## API
 

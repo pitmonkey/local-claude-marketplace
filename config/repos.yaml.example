@@ -28,3 +28,12 @@ repos:
   #   description: Local skills on this machine
   #   ownership: mine
   #   format: flat
+
+  # Example: private GitHub/GitLab repo
+  # Set GIT_AUTH_TOKEN env var at runtime — do NOT put the token here.
+  # - url: https://github.com/yourorg/private-skills
+  #   name: private-skills
+  #   description: Private internal skills
+  #   ownership: mine
+  #   format: proper
+  #   requires_auth: true

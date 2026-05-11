@@ -11,6 +11,8 @@ services:
       - CONFIG_FILE=/config/repos.yaml
       - PORT=8080
       - STORAGE_BACKEND=sqlite
+      # Private repos — token injected at clone/pull time, never stored:
+      # - GIT_AUTH_TOKEN=ghp_YourTokenHere
       # S3 backend (uncomment and set STORAGE_BACKEND=s3 to use):
       # - S3_ENDPOINT=http://rustfs:9000
       # - S3_BUCKET=marketplace

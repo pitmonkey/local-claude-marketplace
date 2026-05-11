@@ -292,3 +292,106 @@ async def test_reindex_source(
     assert reindex_response.status_code == 200
     data = reindex_response.json()
     assert data["indexed"] == 2
+
+
+async def test_create_source_with_requires_auth_string_true(
+    repo: SqliteRepository,
+    app: FastAPI,
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /api/sources with requires_auth='true' (string) stores flag correctly."""
+    # Provide a dummy token so index_source passes the auth check (local paths ignore it)
+    monkeypatch.setenv("GIT_AUTH_TOKEN", "dummy-token")
+
+    source_repo = tmp_path / "source_repo_auth"
+    source_repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main", str(source_repo)], check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=source_repo, check=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=source_repo, check=True)
+    (source_repo / "auth-skill.md").write_text(
+        "---\nname: auth-skill\ndescription: Auth test\n---\n# Auth Skill"
+    )
+    subprocess.run(["git", "add", "."], cwd=source_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=source_repo, check=True)
+
+    payload = {
+        "url": str(source_repo),
+        "name": "auth-source",
+        "description": "A source requiring auth",
+        "ownership": "mine",
+        "format": "flat",
+        "requires_auth": "true",
+    }
+
+    response = client.post("/api/sources", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["requires_auth"] is True
+
+
+async def test_create_source_with_requires_auth_bool_true(
+    repo: SqliteRepository,
+    app: FastAPI,
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /api/sources with requires_auth=True (bool) stores flag correctly."""
+    # Provide a dummy token so index_source passes the auth check (local paths ignore it)
+    monkeypatch.setenv("GIT_AUTH_TOKEN", "dummy-token")
+
+    source_repo = tmp_path / "source_repo_auth_bool"
+    source_repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main", str(source_repo)], check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=source_repo, check=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=source_repo, check=True)
+    (source_repo / "auth-skill2.md").write_text(
+        "---\nname: auth-skill2\ndescription: Auth test 2\n---\n# Auth Skill 2"
+    )
+    subprocess.run(["git", "add", "."], cwd=source_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=source_repo, check=True)
+
+    payload = {
+        "url": str(source_repo),
+        "name": "auth-source-bool",
+        "description": "A source requiring auth (bool)",
+        "ownership": "mine",
+        "format": "flat",
+        "requires_auth": True,
+    }
+
+    response = client.post("/api/sources", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["requires_auth"] is True
+
+
+async def test_create_source_without_requires_auth_defaults_false(
+    repo: SqliteRepository, app: FastAPI, client: TestClient, tmp_path: Path
+) -> None:
+    """POST /api/sources without requires_auth field returns requires_auth=false."""
+    source_repo = tmp_path / "source_repo_no_auth"
+    source_repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main", str(source_repo)], check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=source_repo, check=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=source_repo, check=True)
+    (source_repo / "public-skill.md").write_text(
+        "---\nname: public-skill\ndescription: Public test\n---\n# Public Skill"
+    )
+    subprocess.run(["git", "add", "."], cwd=source_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=source_repo, check=True)
+
+    payload = {
+        "url": str(source_repo),
+        "name": "no-auth-source",
+        "description": "A public source",
+        "ownership": "mine",
+        "format": "flat",
+    }
+
+    response = client.post("/api/sources", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["requires_auth"] is False

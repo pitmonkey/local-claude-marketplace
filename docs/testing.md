@@ -16,3 +16,5 @@ uv run pytest -q --no-header # quiet
 **S3 tests** — use `moto[s3]` to mock AWS. No real credentials needed. Decorate with `@mock_s3` or use the `moto` context manager.
 
 **Storage fixture** — use `SqliteRepository` with a `tmp_path`-scoped DB as the standard fixture for storage and source tests. See `tests/conftest.py` for existing fixtures.
+
+**Env var mocking** — for tests that exercise `requires_auth` sources, use `monkeypatch.setenv("GIT_AUTH_TOKEN", "fake-token")` to inject the token without touching the real environment. To test the missing-token error path, use `monkeypatch.delenv("GIT_AUTH_TOKEN", raising=False)`.

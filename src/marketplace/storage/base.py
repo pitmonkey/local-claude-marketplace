@@ -35,6 +35,7 @@ class SourceRecord:
     format: str  # "flat" | "proper" | "auto"
     is_system: bool = False
     last_indexed_at: datetime | None = None
+    requires_auth: bool = False
 
 
 @runtime_checkable

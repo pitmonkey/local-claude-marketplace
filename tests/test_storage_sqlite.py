@@ -167,3 +167,71 @@ async def test_upsert_is_idempotent(repo: SqliteRepository) -> None:
     await repo.upsert_plugin(plugin)
     results = await repo.list_plugins()
     assert len(results) == 1
+
+
+async def test_source_requires_auth_roundtrip(tmp_path: Path) -> None:
+    """SourceRecord with requires_auth=True is stored and retrieved correctly."""
+    r = SqliteRepository(tmp_path / "auth_roundtrip.db")
+    await r.init()
+
+    source = SourceRecord(
+        id="auth-1",
+        name="Auth Source",
+        url="https://github.com/example/private",
+        description="A private repo",
+        ownership="mine",
+        format="flat",
+        is_system=False,
+        last_indexed_at=None,
+        requires_auth=True,
+    )
+    await r.upsert_source(source)
+    result = await r.get_source("auth-1")
+    assert result is not None
+    assert result.requires_auth is True
+
+
+async def test_source_requires_auth_default_false(tmp_path: Path) -> None:
+    """SourceRecord without requires_auth defaults to False on retrieval."""
+    r = SqliteRepository(tmp_path / "auth_default.db")
+    await r.init()
+
+    source = _make_source()
+    await r.upsert_source(source)
+    result = await r.get_source(source.id)
+    assert result is not None
+    assert result.requires_auth is False
+
+
+async def test_migration_requires_auth_defaults_false(tmp_path: Path) -> None:
+    """Existing DB without requires_auth column gets default False after init."""
+    import aiosqlite
+
+    db_path = tmp_path / "old_schema.db"
+
+    # Simulate old schema without requires_auth column
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.execute(
+            """CREATE TABLE sources (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                description TEXT NOT NULL,
+                ownership TEXT NOT NULL,
+                format TEXT NOT NULL,
+                is_system INTEGER NOT NULL DEFAULT 0,
+                last_indexed_at TEXT
+            )"""
+        )
+        await conn.execute(
+            "INSERT INTO sources VALUES ('old-1', 'Old Source', 'https://example.com', 'desc', 'remote', 'flat', 0, NULL)"
+        )
+        await conn.commit()
+
+    # Run init — should add requires_auth column with default 0
+    r = SqliteRepository(db_path)
+    await r.init()
+
+    result = await r.get_source("old-1")
+    assert result is not None
+    assert result.requires_auth is False

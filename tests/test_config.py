@@ -252,3 +252,46 @@ class TestLoadReposYaml:
             records = load_repos_yaml(config_dir / "repos.yaml")
 
             assert records[0].id != records[1].id
+
+    def test_load_repos_yaml_requires_auth_true(self) -> None:
+        """YAML entry with requires_auth: true → record.requires_auth == True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dir = Path(tmpdir)
+            repos_data = {
+                "repos": [
+                    {
+                        "name": "Private Repo",
+                        "url": "https://github.com/example/private",
+                        "requires_auth": True,
+                    }
+                ]
+            }
+
+            repos_file = config_dir / "repos.yaml"
+            with open(repos_file, "w") as f:
+                yaml.dump(repos_data, f)
+
+            records = load_repos_yaml(config_dir / "repos.yaml")
+            assert len(records) == 1
+            assert records[0].requires_auth is True
+
+    def test_load_repos_yaml_requires_auth_absent_defaults_false(self) -> None:
+        """YAML entry without requires_auth → record.requires_auth == False."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dir = Path(tmpdir)
+            repos_data = {
+                "repos": [
+                    {
+                        "name": "Public Repo",
+                        "url": "https://github.com/example/public",
+                    }
+                ]
+            }
+
+            repos_file = config_dir / "repos.yaml"
+            with open(repos_file, "w") as f:
+                yaml.dump(repos_data, f)
+
+            records = load_repos_yaml(config_dir / "repos.yaml")
+            assert len(records) == 1
+            assert records[0].requires_auth is False
