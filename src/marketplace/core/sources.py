@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 from ..storage.base import PluginRecord, PluginRepository, SourceRecord
-from .git_ops import clone_repo, get_repo_sha, pull_repo
+from .git_ops import check_token_expiry, clone_repo, get_repo_sha, pull_repo
 from .plugin_repo import rebuild_plugin_repo
 from .scanner import scan_repo
+
+logger = logging.getLogger(__name__)
 
 
 async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: Path) -> int:
@@ -21,6 +24,7 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
             raise RuntimeError(
                 f"Source {source.name!r} requires auth but GIT_AUTH_TOKEN is not set"
             )
+        check_token_expiry(token, source.url)
 
     if repo_path.exists():
         pull_repo(repo_path, token=token)

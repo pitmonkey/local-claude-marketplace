@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import json
+import logging
 import subprocess
+import urllib.error
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.marketplace.core.git_ops import (
     _inject_token,
+    check_token_expiry,
     clone_repo,
     get_file_sha,
     get_repo_sha,
@@ -184,3 +190,100 @@ def test_pull_repo_accepts_token_none(git_repo: Path, tmp_path: Path) -> None:
     new_sha = pull_repo(clone_dest, token=None)
     assert len(new_sha) == 40
     assert (clone_dest / "test.txt").read_text() == "v2"
+
+
+def _make_github_mock_response(expiry_date: str | None) -> MagicMock:
+    """Build a mock urlopen context-manager response for GitHub rate_limit."""
+    mock_resp = MagicMock()
+    mock_resp.headers.get.return_value = expiry_date
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_resp)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    return mock_cm
+
+
+def _make_gitlab_mock_response(expires_at: str | None) -> MagicMock:
+    """Build a mock urlopen context-manager response for GitLab token API."""
+    payload: dict[str, object] = {"expires_at": expires_at}
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(payload).encode()
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_resp)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    return mock_cm
+
+
+def _fmt_github(dt: datetime) -> str:
+    """Format datetime as GitHub expiry header value (UTC)."""
+    return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def _fmt_gitlab(dt: datetime) -> str:
+    """Format datetime as GitLab expires_at value."""
+    return dt.strftime("%Y-%m-%d")
+
+
+class TestCheckTokenExpiry:
+    def test_github_warning_when_expiring_soon(self, caplog: pytest.LogCaptureFixture) -> None:
+        expiry = datetime.now(UTC) + timedelta(days=10, hours=12)
+        mock_cm = _make_github_mock_response(_fmt_github(expiry))
+        with (
+            patch("urllib.request.urlopen", return_value=mock_cm),
+            caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
+        ):
+            check_token_expiry("tok", "https://github.com/owner/repo")
+        assert "PAT expiry in 10 days" in caplog.text
+
+    def test_github_no_warning_when_not_expiring(self, caplog: pytest.LogCaptureFixture) -> None:
+        expiry = datetime.now(UTC) + timedelta(days=60)
+        mock_cm = _make_github_mock_response(_fmt_github(expiry))
+        with (
+            patch("urllib.request.urlopen", return_value=mock_cm),
+            caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
+        ):
+            check_token_expiry("tok", "https://github.com/owner/repo")
+        assert "PAT expiry" not in caplog.text
+
+    def test_github_no_expiry_header(self, caplog: pytest.LogCaptureFixture) -> None:
+        mock_cm = _make_github_mock_response(None)
+        with (
+            patch("urllib.request.urlopen", return_value=mock_cm),
+            caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
+        ):
+            check_token_expiry("tok", "https://github.com/owner/repo")
+        assert "PAT expiry" not in caplog.text
+
+    def test_gitlab_warning_when_expiring_soon(self, caplog: pytest.LogCaptureFixture) -> None:
+        # GitLab uses date-only precision (%Y-%m-%d), so strptime yields midnight UTC.
+        # Use timedelta(days=11) so midnight of the resulting date is at least 10 days away.
+        expiry = datetime.now(UTC) + timedelta(days=11)
+        mock_cm = _make_gitlab_mock_response(_fmt_gitlab(expiry))
+        with (
+            patch("urllib.request.urlopen", return_value=mock_cm),
+            caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
+        ):
+            check_token_expiry("tok", "https://gitlab.com/owner/repo")
+        assert "PAT expiry in" in caplog.text
+        assert "rotate GIT_AUTH_TOKEN" in caplog.text
+
+    def test_gitlab_null_expiry(self, caplog: pytest.LogCaptureFixture) -> None:
+        mock_cm = _make_gitlab_mock_response(None)
+        with (
+            patch("urllib.request.urlopen", return_value=mock_cm),
+            caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
+        ):
+            check_token_expiry("tok", "https://gitlab.com/owner/repo")
+        assert "PAT expiry" not in caplog.text
+
+    def test_unknown_host_skips_api_call(self) -> None:
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            check_token_expiry("tok", "https://example.com/owner/repo")
+        assert mock_urlopen.call_count == 0
+
+    def test_network_error_suppressed(self, caplog: pytest.LogCaptureFixture) -> None:
+        with (
+            patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")),
+            caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
+        ):
+            check_token_expiry("tok", "https://github.com/owner/repo")
+        assert "WARNING" not in caplog.text
