@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from src.marketplace.core.git_ops import clone_repo, get_file_sha, get_repo_sha, pull_repo
+from src.marketplace.core.git_ops import (
+    _inject_token,
+    clone_repo,
+    get_file_sha,
+    get_repo_sha,
+    pull_repo,
+)
 
 
 @pytest.fixture
@@ -118,3 +124,63 @@ def test_pull_repo(git_repo: Path, tmp_path: Path) -> None:
     assert new_sha != initial_sha
     # Verify the file was updated
     assert (clone_dest / "test.txt").read_text() == "test content 2"
+
+
+class TestInjectToken:
+    def test_https_url_gets_token_injected(self) -> None:
+        url = "https://github.com/example/repo.git"
+        result = _inject_token(url, "mytoken")
+        assert result == "https://token:mytoken@github.com/example/repo.git"
+
+    def test_http_url_gets_token_injected(self) -> None:
+        url = "http://example.com/repo.git"
+        result = _inject_token(url, "abc123")
+        assert result == "http://token:abc123@example.com/repo.git"
+
+    def test_https_url_with_port_gets_token_and_port(self) -> None:
+        url = "https://example.com:8443/repo.git"
+        result = _inject_token(url, "tok")
+        assert "token:tok@example.com:8443" in result
+
+    def test_ssh_url_is_unchanged(self) -> None:
+        url = "git@github.com:example/repo.git"
+        result = _inject_token(url, "mytoken")
+        assert result == url
+
+    def test_local_path_url_is_unchanged(self) -> None:
+        url = "/tmp/some/local/repo"
+        result = _inject_token(url, "mytoken")
+        assert result == url
+
+
+def test_clone_repo_accepts_token_none(git_repo: Path, tmp_path: Path) -> None:
+    """clone_repo with token=None should behave identically to no-token call."""
+    test_file = git_repo / "test.txt"
+    test_file.write_text("hello")
+    subprocess.run(["git", "add", "test.txt"], cwd=git_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=git_repo, check=True)
+
+    clone_dest = tmp_path / "clone_no_token"
+    clone_repo(str(git_repo), clone_dest, token=None)
+
+    assert clone_dest.exists()
+    assert (clone_dest / "test.txt").read_text() == "hello"
+
+
+def test_pull_repo_accepts_token_none(git_repo: Path, tmp_path: Path) -> None:
+    """pull_repo with token=None should behave identically to no-token call."""
+    test_file = git_repo / "test.txt"
+    test_file.write_text("v1")
+    subprocess.run(["git", "add", "test.txt"], cwd=git_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=git_repo, check=True)
+
+    clone_dest = tmp_path / "pull_no_token"
+    clone_repo(str(git_repo), clone_dest)
+
+    test_file.write_text("v2")
+    subprocess.run(["git", "add", "test.txt"], cwd=git_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "update"], cwd=git_repo, check=True)
+
+    new_sha = pull_repo(clone_dest, token=None)
+    assert len(new_sha) == 40
+    assert (clone_dest / "test.txt").read_text() == "v2"

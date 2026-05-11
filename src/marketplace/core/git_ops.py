@@ -2,21 +2,44 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import cast
+from urllib.parse import urlparse, urlunparse
 
 import git
 
 
-def clone_repo(url: str, dest: Path) -> None:
+def _inject_token(url: str, token: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme in ("https", "http"):
+        netloc = f"token:{token}@{parsed.hostname}"
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+        return urlunparse(parsed._replace(netloc=netloc))
+    return url
+
+
+def clone_repo(url: str, dest: Path, token: str | None = None) -> None:
     """Clone url to dest. No-op if dest already exists."""
     if dest.exists():
         return
-    git.Repo.clone_from(url, str(dest))
+    effective_url = _inject_token(url, token) if token else url
+    git.Repo.clone_from(effective_url, str(dest))
 
 
-def pull_repo(repo_path: Path) -> str:
+def pull_repo(repo_path: Path, token: str | None = None) -> str:
     """git pull --ff-only. Returns new HEAD sha."""
     repo = git.Repo(repo_path)
-    repo.remotes.origin.pull(ff_only=True)
+    origin = repo.remotes.origin
+    if token:
+        original_url = origin.url
+        with origin.config_writer as cw:
+            cw.set("url", _inject_token(original_url, token))
+        try:
+            origin.pull(ff_only=True)
+        finally:
+            with origin.config_writer as cw:
+                cw.set("url", original_url)
+    else:
+        origin.pull(ff_only=True)
     return str(repo.head.commit.hexsha)
 
 

@@ -71,7 +71,7 @@ async def list_sources(request: Request) -> list[dict[str, Any]]:
 
 
 @router.post("/sources", status_code=201)
-async def create_source(request: Request, body: dict[str, str]) -> JSONResponse:
+async def create_source(request: Request, body: dict[str, Any]) -> JSONResponse:
     """Create a new user-owned source."""
     repo: PluginRepository = request.app.state.repo
     data_dir: Path = request.app.state.data_dir
@@ -81,6 +81,10 @@ async def create_source(request: Request, body: dict[str, str]) -> JSONResponse:
     description = body.get("description")
     ownership = body.get("ownership")
     fmt = body.get("format")
+    raw_auth = body.get("requires_auth", "")
+    requires_auth = (
+        raw_auth.lower() in ("true", "1", "yes") if isinstance(raw_auth, str) else bool(raw_auth)
+    )
 
     if not all([url, name, description, ownership, fmt]):
         raise HTTPException(status_code=400, detail="Missing required fields")
@@ -99,6 +103,7 @@ async def create_source(request: Request, body: dict[str, str]) -> JSONResponse:
         description=description,
         ownership=ownership,
         fmt=fmt,
+        requires_auth=requires_auth,
     )
 
     return JSONResponse(content=_record_to_dict(record), status_code=201)

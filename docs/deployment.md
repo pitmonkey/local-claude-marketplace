@@ -40,6 +40,7 @@ The compose file mounts:
 | `S3_BUCKET` | `marketplace` | S3 bucket name |
 | `S3_ACCESS_KEY` | — | S3 credentials |
 | `S3_SECRET_KEY` | — | S3 credentials |
+| `GIT_AUTH_TOKEN` | — | PAT for sources with `requires_auth: true`; injected into HTTPS URL at clone/pull time, never stored |
 
 ---
 
@@ -145,6 +146,35 @@ spec:
       targetPort: 8080
 ```
 
+### Private repos (GIT_AUTH_TOKEN)
+
+If any source has `requires_auth: true`, inject the PAT via a Secret:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: marketplace-git-auth
+type: Opaque
+stringData:
+  GIT_AUTH_TOKEN: "ghp_YourTokenHere"
+```
+
+Reference in the container spec alongside other env:
+
+```yaml
+env:
+  - name: GIT_AUTH_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: marketplace-git-auth
+        key: GIT_AUTH_TOKEN
+```
+
+The token is used only during clone/pull; it is not stored in the DB or written to disk.
+
+---
+
 ### S3 backend (multi-replica)
 
 Set `STORAGE_BACKEND=s3` and supply S3 credentials via a Secret:
@@ -178,7 +208,7 @@ With S3 backend, replicas can scale freely — `/data` PVC is only needed for gi
 
 The app exposes one HTTP port (`8080`). No TLS termination is built in — terminate at an ingress/load balancer.
 
-Outbound: the container clones git repos at startup and on index refresh. Ensure egress to GitHub (or your git hosts) is allowed.
+Outbound: the container clones git repos at startup and on index refresh. Ensure egress to GitHub (or your git hosts) is allowed. For private repos, supply `GIT_AUTH_TOKEN` via environment — it is injected ephemerally and never written to disk.
 
 ---
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,7 @@ from sqlalchemy import (
     Text,
     delete,
     select,
+    text,
 )
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -55,6 +57,7 @@ sources_table = Table(
     Column("format", String, nullable=False),
     Column("is_system", Boolean, nullable=False, default=False),
     Column("last_indexed_at", String, nullable=True),
+    Column("requires_auth", Boolean, nullable=False, default=False),
 )
 
 
@@ -94,6 +97,7 @@ def _source_row_to_record(row: Row[tuple[object, ...]]) -> SourceRecord:
         format=r["format"],
         is_system=bool(r["is_system"]),
         last_indexed_at=last_indexed_at,
+        requires_auth=bool(r["requires_auth"]),
     )
 
 
@@ -109,6 +113,10 @@ class SqliteRepository:
     async def init(self) -> None:
         async with self._engine.begin() as conn:
             await conn.run_sync(metadata.create_all)
+            with contextlib.suppress(Exception):
+                await conn.execute(
+                    text("ALTER TABLE sources ADD COLUMN requires_auth INTEGER NOT NULL DEFAULT 0")
+                )
 
     async def list_plugins(
         self,
@@ -206,6 +214,7 @@ class SqliteRepository:
             format=record.format,
             is_system=int(record.is_system),
             last_indexed_at=last_indexed_at,
+            requires_auth=int(record.requires_auth),
         )
         stmt = sqlite_insert(sources_table).values(**values)
         update_cols = {k: v for k, v in values.items() if k != "id"}

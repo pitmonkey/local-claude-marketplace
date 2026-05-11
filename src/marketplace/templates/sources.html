@@ -39,7 +39,7 @@
           {% if source.is_system %}&#128274; {% endif %}{{ source.name }}
         </td>
         <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
-          <a href="{{ source.url }}" class="hover:text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">{{ source.url }}</a>
+          {% if source.requires_auth %}<span title="Requires GIT_AUTH_TOKEN">&#128273;</span> {% endif %}<a href="{{ source.url }}" class="hover:text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">{{ source.url }}</a>
         </td>
         <td class="px-4 py-3 text-sm text-gray-500">
           {% if source.is_system %}
@@ -136,6 +136,13 @@
           <option value="flat">flat</option>
           <option value="proper">proper</option>
         </select>
+      </div>
+      <div class="sm:col-span-2 flex items-center gap-2">
+        <input type="checkbox" id="requires_auth" name="requires_auth" value="true"
+          class="h-4 w-4 rounded border-gray-300 text-blue-600">
+        <label for="requires_auth" class="text-sm text-gray-700">
+          Requires authentication (<code class="text-xs bg-gray-100 px-1 rounded">GIT_AUTH_TOKEN</code>)
+        </label>
       </div>
     </div>
     <div>
