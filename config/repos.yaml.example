@@ -37,3 +37,4 @@ repos:
   #   ownership: mine
   #   format: proper
   #   requires_auth: true
+  #   subpath: skills  # optional: scan only this subdirectory (e.g. if skills live under skills/)

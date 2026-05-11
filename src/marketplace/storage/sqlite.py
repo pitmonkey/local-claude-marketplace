@@ -58,6 +58,7 @@ sources_table = Table(
     Column("is_system", Boolean, nullable=False, default=False),
     Column("last_indexed_at", String, nullable=True),
     Column("requires_auth", Boolean, nullable=False, default=False),
+    Column("subpath", String, nullable=True),
 )
 
 
@@ -98,6 +99,7 @@ def _source_row_to_record(row: Row[tuple[object, ...]]) -> SourceRecord:
         is_system=bool(r["is_system"]),
         last_indexed_at=last_indexed_at,
         requires_auth=bool(r["requires_auth"]),
+        subpath=r["subpath"],
     )
 
 
@@ -117,6 +119,8 @@ class SqliteRepository:
                 await conn.execute(
                     text("ALTER TABLE sources ADD COLUMN requires_auth INTEGER NOT NULL DEFAULT 0")
                 )
+            with contextlib.suppress(Exception):
+                await conn.execute(text("ALTER TABLE sources ADD COLUMN subpath TEXT NULL"))
 
     async def list_plugins(
         self,
@@ -215,6 +219,7 @@ class SqliteRepository:
             is_system=int(record.is_system),
             last_indexed_at=last_indexed_at,
             requires_auth=int(record.requires_auth),
+            subpath=record.subpath,
         )
         stmt = sqlite_insert(sources_table).values(**values)
         update_cols = {k: v for k, v in values.items() if k != "id"}

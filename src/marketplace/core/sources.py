@@ -1,19 +1,23 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 from ..storage.base import PluginRecord, PluginRepository, SourceRecord
-from .git_ops import clone_repo, get_repo_sha, pull_repo
+from .git_ops import check_token_expiry, clone_repo, get_repo_sha, pull_repo
 from .plugin_repo import rebuild_plugin_repo
 from .scanner import scan_repo
+
+logger = logging.getLogger(__name__)
 
 
 async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: Path) -> int:
     """Clone or pull source repo, scan for plugins, upsert/delete in DB. Returns upsert count."""
     repo_path = data_dir / "repos" / source.name
+    scan_root = repo_path / source.subpath if source.subpath else repo_path
     token: str | None = None
     if source.requires_auth:
         token = os.environ.get("GIT_AUTH_TOKEN")
@@ -21,6 +25,7 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
             raise RuntimeError(
                 f"Source {source.name!r} requires auth but GIT_AUTH_TOKEN is not set"
             )
+        check_token_expiry(token, source.url)
 
     if repo_path.exists():
         pull_repo(repo_path, token=token)
@@ -34,7 +39,7 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
         p.name: p for p in all_plugins if p.source_id == source.id
     }
 
-    records = scan_repo(repo_path, source, repo_sha, existing_plugins)
+    records = scan_repo(scan_root, source, repo_sha, existing_plugins)
 
     scanned_names: set[str] = set()
     for record in records:
@@ -76,6 +81,7 @@ async def add_user_source(
     ownership: str,
     fmt: str,
     requires_auth: bool = False,
+    subpath: str | None = None,
 ) -> SourceRecord:
     """Create a user-owned source, persist it, index it, and return the record."""
     record = SourceRecord(
@@ -87,9 +93,14 @@ async def add_user_source(
         format=fmt,
         is_system=False,
         requires_auth=requires_auth,
+        subpath=subpath,
     )
     await repo.upsert_source(record)
-    await index_source(record, repo, data_dir)
+    try:
+        await index_source(record, repo, data_dir)
+    except Exception:
+        await repo.delete_source(record.id)
+        raise
     return record
 
 

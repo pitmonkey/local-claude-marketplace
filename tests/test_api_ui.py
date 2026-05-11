@@ -94,3 +94,33 @@ async def test_ui_sources_returns_200(repo: SqliteRepository, client: TestClient
 async def test_ui_plugin_not_found(client: TestClient) -> None:
     response = client.get("/plugins/nonexistent")
     assert response.status_code == 404
+
+
+async def test_ui_add_source_surfaces_runtime_error(
+    repo: SqliteRepository, app: FastAPI, client: TestClient
+) -> None:
+    """POST /ui/sources redirects to /sources?error=... when add_user_source raises RuntimeError."""
+    from unittest.mock import AsyncMock, patch
+
+    with patch(
+        "src.marketplace.api.ui.add_user_source",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("auth failed"),
+    ):
+        response = client.post(
+            "/ui/sources",
+            data={
+                "url": "https://example.com/repo.git",
+                "name": "failing-source",
+                "description": "Will fail",
+                "ownership": "mine",
+                "format": "flat",
+            },
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "/sources" in location
+    assert "error=" in location
+    assert "auth" in location

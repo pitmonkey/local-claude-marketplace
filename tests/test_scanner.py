@@ -357,3 +357,69 @@ def test_remote_walk_proper_format_uses_dir_source_path(git_repo: Path) -> None:
     assert r.name == "my-skill"
     assert r.plugin_format == "proper"
     assert r.source_path == "skills/my-skill"  # directory, not SKILL.md file
+
+
+def test_scan_proper_skill_md_only(git_repo: Path) -> None:
+    """A subdir with only SKILL.md (no skill.yaml) should be indexed via frontmatter."""
+    subdir = git_repo / "test-skill"
+    subdir.mkdir()
+    (subdir / "SKILL.md").write_text(
+        "---\nname: test-skill\ndescription: A frontmatter skill\n---\n# Test Skill\n\nContent here."
+    )
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="mine", fmt="proper")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    repo_sha = get_repo_sha(git_repo)
+    records = scan_repo(git_repo, source, repo_sha, {})
+
+    assert len(records) == 1
+    r = records[0]
+    assert r.name == "test-skill"
+    assert r.plugin_format == "proper"
+    assert r.description == "A frontmatter skill"
+
+
+def test_scan_proper_prefers_skill_yaml_when_both_exist(git_repo: Path) -> None:
+    """When both skill.yaml and SKILL.md exist, name should come from skill.yaml."""
+    subdir = git_repo / "my-skill"
+    subdir.mkdir()
+    (subdir / "skill.yaml").write_text(
+        "name: from-yaml\ndescription: From yaml file\ntype: skill\n"
+    )
+    (subdir / "SKILL.md").write_text(
+        "---\nname: from-md\ndescription: From markdown frontmatter\n---\n# Skill\n\nContent here."
+    )
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="mine", fmt="proper")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    repo_sha = get_repo_sha(git_repo)
+    records = scan_repo(git_repo, source, repo_sha, {})
+
+    assert len(records) == 1
+    assert records[0].name == "from-yaml"
+
+
+def test_scan_proper_with_subpath(git_repo: Path) -> None:
+    """scan_repo called with a subpath root finds plugins nested under that path."""
+    skills_dir = git_repo / "skills"
+    skill_dir = skills_dir / "my-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: my-skill\ndescription: Nested skill\n---\n# My Skill\n\nContent here."
+    )
+    _commit_all(git_repo)
+
+    source = _make_source(ownership="mine", fmt="proper")
+    from src.marketplace.core.git_ops import get_repo_sha
+
+    repo_sha = get_repo_sha(git_repo)
+    # Simulate index_source's scan_root = repo_path / subpath
+    scan_root = git_repo / "skills"
+    records = scan_repo(scan_root, source, repo_sha, {})
+
+    assert len(records) == 1
+    assert records[0].name == "my-skill"

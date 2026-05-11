@@ -36,6 +36,7 @@ class SourceRecord:
     is_system: bool = False
     last_indexed_at: datetime | None = None
     requires_auth: bool = False
+    subpath: str | None = None
 
 
 @runtime_checkable
