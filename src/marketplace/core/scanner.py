@@ -146,7 +146,7 @@ def _scan_proper(
             continue
         content = md_file.read_text()
         source_path = subdir.name
-        file_sha = get_file_sha(repo_path, source_path)
+        file_sha = get_file_sha(repo_path, subdir)
         counter, version = _resolve_version(existing_plugins, name, file_sha, yaml_version)
 
         records.append(

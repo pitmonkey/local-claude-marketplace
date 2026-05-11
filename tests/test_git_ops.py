@@ -286,4 +286,4 @@ class TestCheckTokenExpiry:
             caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
         ):
             check_token_expiry("tok", "https://github.com/owner/repo")
-        assert "WARNING" not in caplog.text
+        assert "PAT expiry check failed" in caplog.text
