@@ -18,10 +18,22 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
     """Clone or pull source repo, scan for plugins, upsert/delete in DB. Returns upsert count."""
     repo_path = data_dir / "repos" / source.name
     scan_root = repo_path / source.subpath if source.subpath else repo_path
+    logger.info(
+        "Indexing source %r (url=%s, format=%s, auth=%s, subpath=%s)",
+        source.name,
+        source.url,
+        source.format,
+        source.requires_auth,
+        source.subpath or "",
+    )
     token: str | None = None
     if source.requires_auth:
         token = os.environ.get("GIT_AUTH_TOKEN")
         if not token:
+            logger.error(
+                "Source %r requires auth but GIT_AUTH_TOKEN is not set",
+                source.name,
+            )
             raise RuntimeError(
                 f"Source {source.name!r} requires auth but GIT_AUTH_TOKEN is not set"
             )
@@ -33,6 +45,7 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
         clone_repo(source.url, repo_path, token=token)
 
     repo_sha = get_repo_sha(repo_path)
+    logger.info("Source %r at sha=%s", source.name, repo_sha[:12])
 
     all_plugins = await repo.list_plugins()
     existing_plugins: dict[str, PluginRecord] = {
@@ -40,12 +53,25 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
     }
 
     records = scan_repo(scan_root, source, repo_sha, existing_plugins)
+    logger.info(
+        "Source %r scan complete: %d plugin(s) found",
+        source.name,
+        len(records),
+    )
 
     scanned_names: set[str] = set()
     for record in records:
         await repo.upsert_plugin(record)
         scanned_names.add(record.name)
 
+    stale = [n for n in existing_plugins if n not in scanned_names]
+    if stale:
+        logger.info(
+            "Source %r: removing %d stale plugin(s): %s",
+            source.name,
+            len(stale),
+            stale,
+        )
     for name in existing_plugins:
         if name not in scanned_names:
             await repo.delete_plugin(name)
@@ -64,7 +90,11 @@ async def index_all_sources(repo: PluginRepository, data_dir: Path) -> dict[str,
     sources = await repo.list_sources()
     results: dict[str, int] = {}
     for source in sources:
-        results[source.name] = await index_source(source, repo, data_dir)
+        try:
+            results[source.name] = await index_source(source, repo, data_dir)
+        except Exception:
+            logger.exception("Failed to index source %r — skipping", source.name)
+            results[source.name] = -1
 
     all_plugins = await repo.list_plugins()
     rebuild_plugin_repo(all_plugins, data_dir / "plugin_repo")
