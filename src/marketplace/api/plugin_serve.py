@@ -15,6 +15,12 @@ async def plugin_json(name: str, request: Request) -> JSONResponse:
     if plugin is None:
         return JSONResponse(status_code=404, content={"detail": "Plugin not found"})
 
+    if plugin.plugin_format == "manifest":
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"Plugin served directly from source: {plugin.source_url}"},
+        )
+
     manifest: dict[str, Any] = {
         "name": plugin.name,
         "version": plugin.version,

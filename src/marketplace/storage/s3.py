@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from .base import PluginRecord, SourceRecord
@@ -58,6 +59,7 @@ class S3Repository:
             kwargs["aws_access_key_id"] = self._access_key
         if self._secret_key is not None:
             kwargs["aws_secret_access_key"] = self._secret_key
+        kwargs["config"] = Config(max_pool_connections=50)
         return boto3.client("s3", **kwargs)
 
     async def init(self) -> None:

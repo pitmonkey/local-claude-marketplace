@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,10 +34,14 @@ _SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv"}
 
 
 def detect_layout(repo_path: Path, ownership: str, format_hint: str) -> str:
-    if format_hint in ("flat", "proper"):
-        return format_hint
+    if format_hint == "flat":
+        return "flat"
     if ownership == "remote":
         return "flat"
+    if (repo_path / ".claude-plugin" / "plugin.json").exists():
+        return "manifest"
+    if format_hint == "proper":
+        return "proper"
     for subdir in repo_path.iterdir():
         if subdir.is_dir() and ((subdir / "skill.yaml").exists() or (subdir / "SKILL.md").exists()):
             return "proper"
@@ -226,6 +231,57 @@ def _scan_flat(
     return records
 
 
+def _scan_manifest(
+    repo_path: Path,
+    source: SourceRecord,
+    repo_sha: str,
+    existing_plugins: dict[str, PluginRecord],
+) -> list[PluginRecord]:
+    manifest_file = repo_path / ".claude-plugin" / "plugin.json"
+    try:
+        manifest: dict[str, object] = json.loads(manifest_file.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("_scan_manifest: failed to read plugin.json: %s", exc)
+        return []
+
+    name = str(manifest.get("name", source.name))
+    description = str(manifest.get("description", ""))
+    explicit_version: str | None = str(manifest["version"]) if "version" in manifest else None
+    author_raw = manifest.get("author", {})
+    if isinstance(author_raw, dict):
+        author = str(author_raw.get("name", source.name))
+    else:
+        author = str(author_raw) if author_raw else source.name
+    raw_keywords = manifest.get("keywords", [])
+    tags = [str(k) for k in raw_keywords] if isinstance(raw_keywords, list) else []
+    readme = repo_path / "README.md"
+    try:
+        content = readme.read_text() if readme.exists() else ""
+    except OSError:
+        content = ""
+    plugin_type = str(manifest.get("type", "plugin"))
+    file_sha = get_file_sha(repo_path, ".claude-plugin/plugin.json")
+    counter, version = _resolve_version(existing_plugins, name, file_sha, explicit_version)
+
+    return [
+        _build_record(
+            name=name,
+            version=version,
+            version_counter=counter,
+            plugin_type=plugin_type,
+            description=description,
+            tags=tags,
+            author=author,
+            source=source,
+            source_path=".claude-plugin/plugin.json",
+            plugin_format="manifest",
+            content=content,
+            repo_sha=repo_sha,
+            file_sha=file_sha,
+        )
+    ]
+
+
 def _scan_remote(
     repo_path: Path,
     source: SourceRecord,
@@ -330,6 +386,8 @@ def scan_repo(
         layout,
         repo_path,
     )
+    if layout == "manifest":  # detect_layout only returns this for ownership == "mine"
+        return _scan_manifest(repo_path, source, repo_sha, existing_plugins)
     if source.ownership == "remote":
         return _scan_remote(repo_path, source, repo_sha, existing_plugins)
     if layout == "proper":
