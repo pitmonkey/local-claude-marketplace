@@ -368,6 +368,60 @@ async def test_add_user_source_default_requires_auth_is_false(
     assert record.requires_auth is False
 
 
+async def test_index_all_sources_continues_after_one_failure(
+    tmp_path: Path, source_repo: Path
+) -> None:
+    """index_all_sources records -1 for a failing source and continues to index the rest."""
+    from unittest.mock import patch
+
+    from src.marketplace.storage.sqlite import SqliteRepository
+
+    db = SqliteRepository(tmp_path / "test_continues.db")
+    await db.init()
+
+    bad_source = SourceRecord(
+        id="bad-src",
+        name="bad-source",
+        url="https://example.com/bad.git",
+        description="Always fails",
+        ownership="mine",
+        format="flat",
+    )
+    good_source = SourceRecord(
+        id="good-src",
+        name="good-source",
+        url=str(source_repo),
+        description="Works fine",
+        ownership="mine",
+        format="flat",
+    )
+    await db.upsert_source(bad_source)
+    await db.upsert_source(good_source)
+
+    data_dir = tmp_path / "data_continues"
+    data_dir.mkdir()
+
+    GOOD_COUNT = 5
+
+    async def fake_index_source(source: SourceRecord, repo: object, data_dir_arg: Path) -> int:
+        if source.name == "bad-source":
+            raise RuntimeError("simulated clone failure")
+        return GOOD_COUNT
+
+    with (
+        patch(
+            "src.marketplace.core.sources.index_source",
+            side_effect=fake_index_source,
+        ),
+        patch("src.marketplace.core.sources.rebuild_plugin_repo") as mock_rebuild,
+    ):
+        results = await index_all_sources(db, data_dir)
+
+    assert results["bad-source"] == -1
+    assert results["good-source"] == GOOD_COUNT
+    mock_rebuild.assert_called_once()
+
+
 async def test_add_user_source_rolls_back_on_index_failure(tmp_path: Path) -> None:
     """add_user_source rolls back the source record when index_source raises."""
     from unittest.mock import AsyncMock, patch

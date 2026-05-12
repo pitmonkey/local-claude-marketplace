@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -8,6 +9,8 @@ import yaml
 from ..storage.base import PluginRecord, SourceRecord
 from .git_ops import get_file_sha
 from .validator import parse_frontmatter, validate_plugin_file
+
+logger = logging.getLogger(__name__)
 
 _SKIP_FILES = {
     "readme.md",
@@ -118,7 +121,12 @@ def _scan_proper(
         if yaml_file.exists():
             try:
                 raw_yaml = yaml.safe_load(yaml_file.read_text())
-            except yaml.YAMLError:
+            except yaml.YAMLError as exc:
+                logger.warning(
+                    "_scan_proper: skipping %s — invalid skill.yaml: %s",
+                    subdir,
+                    exc,
+                )
                 continue
             meta: dict[str, object] = raw_yaml if isinstance(raw_yaml, dict) else {}
             name = str(meta.get("name", subdir.name))
@@ -140,13 +148,18 @@ def _scan_proper(
             plugin_type = str(meta.get("type", "skill"))
             md_file = skill_md_file
         else:
+            logger.debug("_scan_proper: skipping %s — no skill.yaml or SKILL.md", subdir)
             continue
 
         if md_file is None:
+            logger.warning(
+                "_scan_proper: skipping %s — skill.yaml found but no .md file",
+                subdir,
+            )
             continue
         content = md_file.read_text()
         source_path = subdir.name
-        file_sha = get_file_sha(repo_path, source_path)
+        file_sha = get_file_sha(repo_path, subdir)
         counter, version = _resolve_version(existing_plugins, name, file_sha, yaml_version)
 
         records.append(
@@ -178,6 +191,7 @@ def _scan_flat(
     records: list[PluginRecord] = []
     for md_file in repo_path.glob("*.md"):
         if md_file.name.lower() in _SKIP_FILES:
+            logger.debug("_scan_flat: skipping known doc file %s", md_file.name)
             continue
         content = md_file.read_text()
         meta = parse_frontmatter(content)
@@ -225,10 +239,12 @@ def _scan_remote(
         for entry in sorted(directory.iterdir()):
             if entry.is_dir():
                 if entry.name in _SKIP_DIRS:
+                    logger.debug("_scan_remote: skipping dir %s", entry.name)
                     continue
                 walk(entry)
             elif entry.suffix == ".md":
                 if entry.name.lower() in _SKIP_FILES:
+                    logger.debug("_scan_remote: skipping doc file %s", entry.name)
                     continue
                 rel = entry.relative_to(repo_path)
                 content = entry.read_text()
@@ -257,6 +273,7 @@ def _scan_remote(
                 else:
                     result = validate_plugin_file(content, entry.stem)
                     if not result.valid:
+                        logger.debug("_scan_remote: skipping %s — failed validation", rel)
                         continue
                     plugin_format = "flat"
                     source_path = str(rel)
@@ -307,6 +324,12 @@ def scan_repo(
     existing_plugins: dict[str, PluginRecord],
 ) -> list[PluginRecord]:
     layout = detect_layout(repo_path, source.ownership, source.format)
+    logger.info(
+        "scan_repo: source=%r layout=%s path=%s",
+        source.name,
+        layout,
+        repo_path,
+    )
     if source.ownership == "remote":
         return _scan_remote(repo_path, source, repo_sha, existing_plugins)
     if layout == "proper":

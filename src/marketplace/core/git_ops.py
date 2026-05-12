@@ -70,33 +70,46 @@ def check_token_expiry(token: str, source_url: str) -> None:
                     expiry.strftime("%Y-%m-%d"),
                 )
     except Exception as exc:
-        logger.debug("PAT expiry check failed (non-fatal): %s", exc)
+        logger.warning("PAT expiry check failed (non-fatal): %s", exc)
 
 
 def clone_repo(url: str, dest: Path, token: str | None = None) -> None:
     """Clone url to dest. No-op if dest already exists."""
     if dest.exists():
         return
-    effective_url = _inject_token(url, token) if token else url
-    git.Repo.clone_from(effective_url, str(dest))
+    logger.info("Cloning %s -> %s (auth=%s)", url, dest, token is not None)
+    try:
+        effective_url = _inject_token(url, token) if token else url
+        git.Repo.clone_from(effective_url, str(dest))
+        logger.info("Clone complete: %s", dest)
+    except git.GitCommandError as exc:
+        logger.error("Clone failed for %s: %s", url, exc)
+        raise
 
 
 def pull_repo(repo_path: Path, token: str | None = None) -> str:
     """git pull --ff-only. Returns new HEAD sha."""
+    logger.info("Pulling %s (auth=%s)", repo_path, token is not None)
     repo = git.Repo(repo_path)
     origin = repo.remotes.origin
-    if token:
-        original_url = origin.url
-        with origin.config_writer as cw:
-            cw.set("url", _inject_token(original_url, token))
-        try:
-            origin.pull(ff_only=True)
-        finally:
+    try:
+        if token:
+            original_url = origin.url
             with origin.config_writer as cw:
-                cw.set("url", original_url)
-    else:
-        origin.pull(ff_only=True)
-    return str(repo.head.commit.hexsha)
+                cw.set("url", _inject_token(original_url, token))
+            try:
+                origin.pull(ff_only=True)
+            finally:
+                with origin.config_writer as cw:
+                    cw.set("url", original_url)
+        else:
+            origin.pull(ff_only=True)
+        sha = str(repo.head.commit.hexsha)
+        logger.info("Pull complete: %s at sha=%s", repo_path, sha[:12])
+        return sha
+    except git.GitCommandError as exc:
+        logger.error("Pull failed for %s: %s", repo_path, exc)
+        raise
 
 
 def get_repo_sha(repo_path: Path) -> str:
@@ -105,11 +118,17 @@ def get_repo_sha(repo_path: Path) -> str:
     return str(repo.head.commit.hexsha)
 
 
-def get_file_sha(repo_path: Path, file_path: str) -> str:
+def get_file_sha(repo_path: Path, file_path: str | Path) -> str:
     """SHA of the last commit that touched file_path. Returns '' if file has no commits yet."""
     repo = git.Repo(repo_path, search_parent_directories=True)
+    if (
+        isinstance(file_path, Path)
+        and file_path.is_absolute()
+        and repo.working_tree_dir is not None
+    ):
+        file_path = str(file_path.relative_to(Path(repo.working_tree_dir)))
     try:
-        result = cast(str, repo.git.log("-1", "--format=%H", "--", file_path))
+        result = cast(str, repo.git.log("-1", "--format=%H", "--", str(file_path)))
         return result
     except git.GitCommandError:
         return ""

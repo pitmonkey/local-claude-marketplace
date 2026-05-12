@@ -66,6 +66,28 @@ def test_get_file_sha_missing_file_returns_empty(git_repo: Path) -> None:
     assert file_sha == ""
 
 
+def test_get_file_sha_absolute_path_matches_string_path(git_repo: Path) -> None:
+    """Test that get_file_sha returns the same SHA for an absolute Path and a relative string."""
+    # Create a file in a subdirectory and commit it
+    subdir = git_repo / "subdir"
+    subdir.mkdir()
+    test_file = subdir / "test.txt"
+    test_file.write_text("subdir file content")
+    subprocess.run(["git", "add", "subdir/test.txt"], cwd=git_repo, check=True)
+    subprocess.run(["git", "commit", "-m", "Add subdir/test.txt"], cwd=git_repo, check=True)
+
+    # Call with an absolute Path object
+    sha_from_abs = get_file_sha(git_repo, test_file)
+    # Call with the relative string form
+    sha_from_str = get_file_sha(git_repo, "subdir/test.txt")
+
+    # Both should return the same non-empty 40-char hex SHA
+    assert sha_from_abs != ""
+    assert len(sha_from_abs) == 40
+    assert all(c in "0123456789abcdef" for c in sha_from_abs)
+    assert sha_from_abs == sha_from_str
+
+
 def test_clone_repo(git_repo: Path, tmp_path: Path) -> None:
     """Test cloning a repo."""
     # Create a commit to clone
@@ -286,4 +308,4 @@ class TestCheckTokenExpiry:
             caplog.at_level(logging.WARNING, logger="src.marketplace.core.git_ops"),
         ):
             check_token_expiry("tok", "https://github.com/owner/repo")
-        assert "WARNING" not in caplog.text
+        assert "PAT expiry check failed" in caplog.text
