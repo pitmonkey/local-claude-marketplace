@@ -11,6 +11,8 @@
       <h2 class="text-sm font-semibold text-gray-900 truncate flex-1 mr-2">{{ plugin.name }}</h2>
       {% if plugin.type == "skill" %}
       <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">skill</span>
+      {% elif plugin.type == "plugin" %}
+      <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">plugin</span>
       {% else %}
       <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">subagent</span>
       {% endif %}

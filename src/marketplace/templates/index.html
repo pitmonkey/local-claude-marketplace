@@ -36,6 +36,10 @@
       href="/?type=subagent{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
       class="px-4 py-2 rounded-full text-sm font-medium {% if type == 'subagent' %}bg-purple-600 text-white{% else %}bg-white text-gray-600 border border-gray-300 hover:bg-gray-50{% endif %}"
     >Agents</a>
+    <a
+      href="/?type=plugin{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
+      class="px-4 py-2 rounded-full text-sm font-medium {% if type == 'plugin' %}bg-green-600 text-white{% else %}bg-white text-gray-600 border border-gray-300 hover:bg-gray-50{% endif %}"
+    >Plugins</a>
     <input type="hidden" name="type" value="{{ type or '' }}">
   </div>
 </div>

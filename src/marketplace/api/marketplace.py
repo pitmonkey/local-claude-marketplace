@@ -34,14 +34,17 @@ async def _build_marketplace_response(request: Request) -> dict[str, Any]:
 
         category = "development" if plugin.type == "subagent" else "productivity"
 
-        source: dict[str, Any] = {
-            "source": "git-subdir",
-            "url": f"{base_url}/git.git",
-            "path": f"plugins/{plugin.name}",
-            "ref": "main",
-        }
-        if head_sha:
-            source["sha"] = head_sha
+        if plugin.plugin_format == "manifest":
+            source: dict[str, Any] = {"source": "url", "url": plugin.source_url}
+        else:
+            source = {
+                "source": "git-subdir",
+                "url": f"{base_url}/git.git",
+                "path": f"plugins/{plugin.name}",
+                "ref": "main",
+            }
+            if head_sha:
+                source["sha"] = head_sha
 
         plugin_entry: dict[str, Any] = {
             "name": plugin.name,

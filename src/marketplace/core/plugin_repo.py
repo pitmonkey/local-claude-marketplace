@@ -101,11 +101,12 @@ def rebuild_plugin_repo(plugins: list[PluginRecord], repo_path: Path) -> str:
         shutil.rmtree(plugins_dir)
     plugins_dir.mkdir()
 
-    # Filter to only remote-source plugins.
+    # Filter to only remote-source plugins, excluding manifest plugins.
     remote_plugins = [
         p
         for p in plugins
-        if p.source_url.startswith("http://") or p.source_url.startswith("https://")
+        if (p.source_url.startswith("http://") or p.source_url.startswith("https://"))
+        and p.plugin_format != "manifest"
     ]
 
     for plugin in remote_plugins:

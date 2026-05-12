@@ -16,7 +16,7 @@ class PluginRecord:
     source_id: str
     source_url: str
     source_path: str
-    plugin_format: str  # "flat" | "proper"
+    plugin_format: str  # "flat" | "proper" | "manifest"
     source_ownership: str  # "mine" | "remote"
     content: str
     repo_sha: str
