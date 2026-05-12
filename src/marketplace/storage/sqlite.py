@@ -129,7 +129,7 @@ class SqliteRepository:
         query: str | None = None,
     ) -> list[PluginRecord]:
         stmt = select(plugins_table)
-        if type_filter is not None:
+        if type_filter:
             stmt = stmt.where(plugins_table.c.type == type_filter)
         async with self._engine.connect() as conn:
             result = await conn.execute(stmt)
