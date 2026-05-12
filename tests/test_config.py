@@ -36,6 +36,7 @@ class TestGetSettingsDefaults:
             mp.delenv("S3_BUCKET", raising=False)
             mp.delenv("S3_ACCESS_KEY", raising=False)
             mp.delenv("S3_SECRET_KEY", raising=False)
+            mp.setattr("src.marketplace.config.load_dotenv", lambda *args, **kwargs: None)
 
             settings = get_settings()
 
