@@ -24,13 +24,14 @@
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ownership</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Indexed</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contents</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-200">
       {% if not sources %}
       <tr>
-        <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500">No sources configured.</td>
+        <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500">No sources configured.</td>
       </tr>
       {% else %}
       {% for source in sources %}
@@ -55,6 +56,21 @@
           {{ source.last_indexed_at.strftime('%Y-%m-%d %H:%M') }}
           {% else %}
           <span class="text-gray-400">Never</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-sm text-gray-500">
+          {% set counts = plugin_counts.get(source.id, {"skill": 0, "subagent": 0}) %}
+          {% if counts["skill"] == 0 and counts["subagent"] == 0 %}
+          <span class="text-gray-400">—</span>
+          {% else %}
+          <span class="inline-flex gap-1 flex-wrap">
+            {% if counts["skill"] > 0 %}
+            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">{{ counts["skill"] }} skill{% if counts["skill"] != 1 %}s{% endif %}</span>
+            {% endif %}
+            {% if counts["subagent"] > 0 %}
+            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">{{ counts["subagent"] }} agent{% if counts["subagent"] != 1 %}s{% endif %}</span>
+            {% endif %}
+          </span>
           {% endif %}
         </td>
         <td class="px-4 py-3 text-sm">
