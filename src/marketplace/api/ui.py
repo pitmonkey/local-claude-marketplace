@@ -63,10 +63,18 @@ async def sources(request: Request, error: str | None = None) -> object:
     templates: Jinja2Templates = request.app.state.templates
 
     sources_list = await repo.list_sources()
+    all_plugins = await repo.list_plugins()
+
+    plugin_counts: dict[str, dict[str, int]] = {}
+    for p in all_plugins:
+        counts = plugin_counts.setdefault(p.source_id, {"skill": 0, "subagent": 0})
+        if p.type in counts:
+            counts[p.type] += 1
+
     return templates.TemplateResponse(
         request,
         "sources.html",
-        {"sources": sources_list, "error": error},
+        {"sources": sources_list, "error": error, "plugin_counts": plugin_counts},
     )
 
 
