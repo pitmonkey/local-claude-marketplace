@@ -48,7 +48,12 @@ async def plugin_detail(request: Request, name: str) -> object:
     if plugin is None:
         raise HTTPException(status_code=404, detail=f"Plugin {name!r} not found")
 
-    content_html = _md.render(plugin.content)
+    content = plugin.content.replace("\r\n", "\n")
+    if content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            content = content[end + 4 :].lstrip("\n")
+    content_html = _md.render(content)
     return templates.TemplateResponse(
         request,
         "plugin.html",

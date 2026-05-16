@@ -4,12 +4,16 @@
 
 {% block content %}
 <div class="max-w-3xl">
+  <a href="/" class="rc-back-link mb-4">← Browse</a>
+
   <!-- Header -->
   <div class="mb-6">
     <div class="flex items-center gap-3 mb-2">
       <h1 class="text-3xl font-bold t1 tracking-tight">{{ plugin.name }}</h1>
       {% if plugin.type == "skill" %}
       <span class="rc-badge rc-badge-skill">skill</span>
+      {% elif plugin.type == "plugin" %}
+      <span class="rc-badge rc-badge-plugin">plugin</span>
       {% else %}
       <span class="rc-badge rc-badge-agent">subagent</span>
       {% endif %}
@@ -29,6 +33,10 @@
     </div>
     {% endif %}
   </div>
+
+  {% if plugin.description %}
+  <p class="text-base t2 leading-relaxed mb-6">{{ plugin.description }}</p>
+  {% endif %}
 
   <!-- Content -->
   <div class="rc-prose prose prose-sm max-w-none p-6 mb-6">
