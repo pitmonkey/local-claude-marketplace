@@ -6,9 +6,9 @@
 {% else %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
   {% for plugin in plugins %}
-  <a href="/plugins/{{ plugin.name }}" class="rc-card p-5">
+  <a href="/plugins/{{ plugin.name }}" class="rc-card {% if plugin.type == 'skill' %}rc-card-skill{% elif plugin.type == 'plugin' %}rc-card-plugin{% else %}rc-card-agent{% endif %} p-5">
     <div class="flex items-start justify-between mb-2">
-      <h2 class="text-sm font-semibold t1 truncate flex-1 mr-2">{{ plugin.name }}</h2>
+      <h2 class="text-base font-semibold t1 truncate flex-1 mr-2">{{ plugin.name }}</h2>
       {% if plugin.type == "skill" %}
       <span class="rc-badge rc-badge-skill">skill</span>
       {% elif plugin.type == "plugin" %}
@@ -17,9 +17,12 @@
       <span class="rc-badge rc-badge-agent">subagent</span>
       {% endif %}
     </div>
-    <p class="text-sm t2 line-clamp-2 mb-3">{{ plugin.description }}</p>
+    <p class="text-sm t2 line-clamp-3 mb-3">{{ plugin.description }}</p>
     <div class="flex items-center justify-between text-xs t3">
-      <span>v{{ plugin.version }}</span>
+      <div class="flex items-center gap-2">
+        <span>v{{ plugin.version }}</span>
+        {% if plugin.author %}<span>· {{ plugin.author }}</span>{% endif %}
+      </div>
       <span class="truncate ml-2">{{ plugin.source_id }}</span>
     </div>
   </a>
