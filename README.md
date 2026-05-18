@@ -8,6 +8,7 @@ Claude Code's marketplace protocol lets you add custom marketplace sources in se
 
 - **Host your own private marketplace** — share internal skills and agents across a team without publishing them publicly.
 - **Aggregate community sources** — pull from `awesome-claude-code-subagents` and other public repos into one searchable index; git changes are tracked and converted to version updates automatically.
+- **Install one, not all** — community repos like `awesome-claude-code-subagents` contain hundreds of skills; this marketplace re-exposes each one individually so you can install exactly what you want without pulling in everything.
 - **Browse before you install** — read rendered skill docs, filter by type and tags, search by name or skill content.
 - **Own your index** — no dependency on any external service; runs entirely on your infrastructure.
 - **Versioned skills via git** — every reindex computes a file SHA; versions increment automatically when content changes, no manual tagging needed.
