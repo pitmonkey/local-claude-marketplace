@@ -48,6 +48,12 @@ http://localhost:8080/marketplace.json
 
 Skills and agents will then be available to browse and install from within Claude Code.
 
+## Screenshots
+
+![Browse skills and agents](docs/images/browse.png)
+
+![Manage sources](docs/images/sources.png)
+
 ## Features
 
 - **Web UI** — browse plugins as cards with live search (name, description, and skill content, ranked by match relevance) and tag/type filtering (HTMX, no page reloads)
@@ -85,6 +91,8 @@ my-skill/
 ```
 
 Version is explicit: set the `version` field in `skill.yaml` and the indexer uses it as-is. If `version` is omitted, the same auto-increment behaviour as `flat` applies. This layout gives full control — bump the version in `skill.yaml` as part of your commit, and the marketplace reflects it on the next reindex.
+
+**Note:** If you already manage your own skills repo and add it directly to Claude Code as a marketplace source, you don't need `ownership: mine` — that layout is mainly useful when you want a single centralized marketplace serving multiple users.
 
 ## Configuration
 
