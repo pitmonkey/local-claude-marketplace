@@ -115,6 +115,82 @@ async def test_list_plugins_query(repo: SqliteRepository) -> None:
     assert len(no_match) == 0
 
 
+async def test_list_plugins_query_searches_content(repo: SqliteRepository) -> None:
+    plugin = PluginRecord(
+        name="infra-tool",
+        version="1.0.0",
+        type="skill",
+        description="A generic tool",
+        tags=["dev"],
+        author="alice",
+        source_id="src-1",
+        source_url="https://github.com/example/repo",
+        source_path="skills/infra-tool/SKILL.md",
+        plugin_format="proper",
+        source_ownership="remote",
+        content="# Infra Tool\nDeploys workloads to kubernetes clusters.",
+        repo_sha="abc123",
+        file_sha="def456",
+        version_counter=1,
+        updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+    )
+    await repo.upsert_plugin(plugin)
+
+    results = await repo.list_plugins(query="kubernetes")
+    assert len(results) == 1
+    assert results[0].name == "infra-tool"
+
+    no_results = await repo.list_plugins(query="notpresent")
+    assert len(no_results) == 0
+
+
+async def test_list_plugins_query_ranking(repo: SqliteRepository) -> None:
+    await repo.upsert_plugin(
+        PluginRecord(
+            name="kubernetes",
+            version="1.0.0",
+            type="skill",
+            description="a tool",
+            tags=["dev"],
+            author="alice",
+            source_id="src-1",
+            source_url="https://github.com/example/repo",
+            source_path="skills/kubernetes/SKILL.md",
+            plugin_format="proper",
+            source_ownership="remote",
+            content="generic",
+            repo_sha="abc123",
+            file_sha="def456",
+            version_counter=1,
+            updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+        )
+    )
+    await repo.upsert_plugin(
+        PluginRecord(
+            name="other-tool",
+            version="1.0.0",
+            type="skill",
+            description="a tool",
+            tags=["dev"],
+            author="alice",
+            source_id="src-1",
+            source_url="https://github.com/example/repo",
+            source_path="skills/other-tool/SKILL.md",
+            plugin_format="proper",
+            source_ownership="remote",
+            content="uses kubernetes underneath",
+            repo_sha="abc123",
+            file_sha="def456",
+            version_counter=1,
+            updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+        )
+    )
+    results = await repo.list_plugins(query="kubernetes")
+    assert len(results) == 2
+    assert results[0].name == "kubernetes"
+    assert results[1].name == "other-tool"
+
+
 async def test_list_plugins_tags(repo: SqliteRepository) -> None:
     await repo.upsert_plugin(_make_plugin(name="p1", tags=["python", "dev"]))
     await repo.upsert_plugin(_make_plugin(name="p2", tags=["python", "web"]))
