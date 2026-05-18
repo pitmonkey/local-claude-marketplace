@@ -152,4 +152,4 @@ uv run mypy .
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)
