@@ -50,7 +50,7 @@ Skills and agents will then be available to browse and install from within Claud
 
 ## Features
 
-- **Web UI** — browse plugins as cards with live search (name, description, and skill content) and tag/type filtering (HTMX, no page reloads)
+- **Web UI** — browse plugins as cards with live search (name, description, and skill content, ranked by match relevance) and tag/type filtering (HTMX, no page reloads)
 - **Plugin detail pages** — rendered Markdown docs for each skill or agent
 - **Source management** — add, remove, and manually reindex Git repos via the UI or API
 - **`marketplace.json` endpoint** — Claude Code-compatible plugin feed at `/marketplace.json`

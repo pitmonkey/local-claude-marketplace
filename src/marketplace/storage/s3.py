@@ -123,13 +123,18 @@ class S3Repository:
             records = [r for r in records if all(t in r.tags for t in tags)]
         if query:
             q = query.lower()
-            records = [
-                r
-                for r in records
-                if q in r.name.lower()
-                or q in r.description.lower()
-                or q in (r.content or "").lower()
-            ]
+
+            def _score(r: PluginRecord) -> int:
+                if q in r.name.lower():
+                    return 0
+                if q in r.description.lower():
+                    return 1
+                if q in (r.content or "").lower():
+                    return 2
+                return 99
+
+            records = [r for r in records if _score(r) < 99]
+            records = sorted(records, key=_score)
         return records
 
     async def get_plugin(self, name: str) -> PluginRecord | None:
