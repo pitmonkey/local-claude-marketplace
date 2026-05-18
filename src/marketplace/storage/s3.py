@@ -117,13 +117,19 @@ class S3Repository:
         )
         records = [_plugin_from_dict(d) for d in results if d is not None]
 
-        if type_filter is not None:
+        if type_filter:
             records = [r for r in records if r.type == type_filter]
         if tags:
             records = [r for r in records if all(t in r.tags for t in tags)]
         if query:
             q = query.lower()
-            records = [r for r in records if q in r.name.lower() or q in r.description.lower()]
+            records = [
+                r
+                for r in records
+                if q in r.name.lower()
+                or q in r.description.lower()
+                or q in (r.content or "").lower()
+            ]
         return records
 
     async def get_plugin(self, name: str) -> PluginRecord | None:

@@ -127,6 +127,36 @@ async def test_list_plugins_query(repo: SqliteRepository, app: FastAPI, client: 
     assert data[0]["name"] == "alpha-tool"
 
 
+async def test_list_plugins_query_searches_content(
+    repo: SqliteRepository, app: FastAPI, client: TestClient
+) -> None:
+    plugin = PluginRecord(
+        name="container-tool",
+        version="1.0.0",
+        type="skill",
+        description="A generic tool",
+        tags=["dev"],
+        author="alice",
+        source_id="src-1",
+        source_url="https://github.com/example/repo",
+        source_path="skills/container-tool/SKILL.md",
+        plugin_format="proper",
+        source_ownership="remote",
+        content="# Container Tool\nOrchestrates kubernetes deployments.",
+        repo_sha="abc123",
+        file_sha="def456",
+        version_counter=1,
+        updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+    )
+    await repo.upsert_plugin(plugin)
+
+    response = client.get("/api/plugins?q=kubernetes")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["name"] == "container-tool"
+
+
 async def test_list_plugins_tags(repo: SqliteRepository, app: FastAPI, client: TestClient) -> None:
     await repo.upsert_plugin(_make_plugin(name="p1", tags=["python", "dev"]))
     await repo.upsert_plugin(_make_plugin(name="p2", tags=["python", "web"]))

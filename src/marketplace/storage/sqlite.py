@@ -142,7 +142,13 @@ class SqliteRepository:
 
         if query:
             q = query.lower()
-            records = [r for r in records if q in r.name.lower() or q in r.description.lower()]
+            records = [
+                r
+                for r in records
+                if q in r.name.lower()
+                or q in r.description.lower()
+                or q in (r.content or "").lower()
+            ]
 
         return records
 
