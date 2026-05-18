@@ -17,6 +17,7 @@ jobs:
 
   build:
     needs: [test, lint]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     uses: pitmonkey/.github/.github/workflows/build-docker.yml@main
     with:
       image-name: local-claude-marketplace
@@ -30,7 +31,7 @@ jobs:
 
   notify:
     needs: [test, lint, build]
-    if: always() && github.actor != 'dependabot[bot]'
+    if: always() && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     uses: pitmonkey/.github/.github/workflows/notify-slack.yml@main
     with:
       project-name: local-claude-marketplace
