@@ -8,6 +8,7 @@ Claude Code's marketplace protocol lets you add custom marketplace sources in se
 
 - **Host your own private marketplace** — share internal skills and agents across a team without publishing them publicly.
 - **Aggregate community sources** — pull from `awesome-claude-code-subagents` and other public repos into one searchable index; git changes are tracked and converted to version updates automatically.
+- **Install one, not all** — community repos like `awesome-claude-code-subagents` contain hundreds of skills; this marketplace re-exposes each one individually so you can install exactly what you want without pulling in everything.
 - **Browse before you install** — read rendered skill docs, filter by type and tags, search by name or skill content.
 - **Own your index** — no dependency on any external service; runs entirely on your infrastructure.
 - **Versioned skills via git** — every reindex computes a file SHA; versions increment automatically when content changes, no manual tagging needed.
@@ -48,6 +49,12 @@ http://localhost:8080/marketplace.json
 
 Skills and agents will then be available to browse and install from within Claude Code.
 
+## Screenshots
+
+![Browse skills and agents](docs/images/browse.png)
+
+![Manage sources](docs/images/sources.png)
+
 ## Features
 
 - **Web UI** — browse plugins as cards with live search (name, description, and skill content, ranked by match relevance) and tag/type filtering (HTMX, no page reloads)
@@ -85,6 +92,8 @@ my-skill/
 ```
 
 Version is explicit: set the `version` field in `skill.yaml` and the indexer uses it as-is. If `version` is omitted, the same auto-increment behaviour as `flat` applies. This layout gives full control — bump the version in `skill.yaml` as part of your commit, and the marketplace reflects it on the next reindex.
+
+**Note:** If you already manage your own skills repo and add it directly to Claude Code as a marketplace source, you don't need `ownership: mine` — that layout is mainly useful when you want a single centralized marketplace serving multiple users.
 
 ## Configuration
 
@@ -152,4 +161,4 @@ uv run mypy .
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)
