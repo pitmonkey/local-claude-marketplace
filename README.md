@@ -51,9 +51,9 @@ Skills and agents will then be available to browse and install from within Claud
 
 ## Screenshots
 
-![Browse skills and agents](docs/images/browse.png)
+<img src="docs/images/local-claude-marketplace-main.png" width="600" alt="Browse skills and agents">
 
-![Manage sources](docs/images/sources.png)
+<img src="docs/images/local-claude-marketplace-sources.png" width="600" alt="Manage sources">
 
 ## Features
 
