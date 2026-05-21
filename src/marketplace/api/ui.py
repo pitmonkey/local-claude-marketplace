@@ -7,7 +7,11 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from markdown_it import MarkdownIt
 
-from ..core.sources import add_user_source, index_source, remove_user_source
+from ..core.sources import (
+    add_user_source,
+    reindex_source_and_rebuild,
+    remove_user_source,
+)
 from ..storage.base import PluginRepository
 
 router = APIRouter()
@@ -143,7 +147,8 @@ async def add_source(
 async def delete_source(request: Request, id: str) -> RedirectResponse:
     """Handle source deletion form submission."""
     repo: PluginRepository = request.app.state.repo
-    await remove_user_source(repo, id)
+    data_dir: Path = request.app.state.data_dir
+    await remove_user_source(repo, id, data_dir)
     return RedirectResponse("/sources", status_code=303)
 
 
@@ -156,7 +161,7 @@ async def reindex_source(request: Request, id: str) -> RedirectResponse:
     source = await repo.get_source(id)
     if source is not None:
         try:
-            await index_source(source, repo, data_dir)
+            await reindex_source_and_rebuild(source, repo, data_dir)
         except (ValueError, RuntimeError) as exc:
             return RedirectResponse(f"/sources?error={exc}", status_code=303)
 

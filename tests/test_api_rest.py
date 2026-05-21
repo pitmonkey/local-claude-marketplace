@@ -463,7 +463,7 @@ async def test_reindex_source_returns_400_on_runtime_error(
     await repo.upsert_source(source)
 
     with patch(
-        "src.marketplace.api.rest.index_source",
+        "src.marketplace.api.rest.reindex_source_and_rebuild",
         new_callable=AsyncMock,
         side_effect=RuntimeError("clone failed"),
     ):

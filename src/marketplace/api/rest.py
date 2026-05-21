@@ -8,7 +8,11 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 
-from ..core.sources import add_user_source, index_source, remove_user_source
+from ..core.sources import (
+    add_user_source,
+    reindex_source_and_rebuild,
+    remove_user_source,
+)
 from ..storage.base import PluginRepository
 
 router = APIRouter(prefix="/api")
@@ -118,9 +122,10 @@ async def create_source(request: Request, body: dict[str, Any]) -> JSONResponse:
 async def delete_source(request: Request, id: str) -> Response:
     """Delete a user-owned source."""
     repo: PluginRepository = request.app.state.repo
+    data_dir: Path = request.app.state.data_dir
 
     try:
-        await remove_user_source(repo, id)
+        await remove_user_source(repo, id, data_dir)
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Cannot remove system source") from e
 
@@ -138,7 +143,7 @@ async def reindex_source(request: Request, id: str) -> dict[str, int]:
         raise HTTPException(status_code=404, detail=f"Source {id!r} not found")
 
     try:
-        count = await index_source(source, repo, data_dir)
+        count = await reindex_source_and_rebuild(source, repo, data_dir)
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"indexed": count}

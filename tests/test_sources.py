@@ -242,7 +242,7 @@ async def test_remove_user_source(tmp_path: Path, source_repo: Path) -> None:
     plugins_before = await db3.list_plugins()
     assert len(plugins_before) == 2
 
-    await remove_user_source(db3, record.id)
+    await remove_user_source(db3, record.id, data_dir)
 
     source_after = await db3.get_source(record.id)
     assert source_after is None
@@ -257,7 +257,7 @@ async def test_remove_user_source_already_gone(tmp_path: Path) -> None:
     db4 = SqliteRepository(tmp_path / "test_gone.db")
     await db4.init()
 
-    await remove_user_source(db4, "nonexistent-id")
+    await remove_user_source(db4, "nonexistent-id", tmp_path)
 
 
 async def test_remove_system_source_raises(tmp_path: Path) -> None:
@@ -278,7 +278,7 @@ async def test_remove_system_source_raises(tmp_path: Path) -> None:
     await db5.upsert_source(sys_source)
 
     with pytest.raises(ValueError, match="Cannot remove system source"):
-        await remove_user_source(db5, "sys-1")
+        await remove_user_source(db5, "sys-1", tmp_path)
 
 
 async def test_index_source_raises_when_requires_auth_and_no_token(

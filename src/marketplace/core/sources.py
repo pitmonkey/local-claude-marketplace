@@ -131,10 +131,22 @@ async def add_user_source(
     except Exception:
         await repo.delete_source(record.id)
         raise
+    all_plugins = await repo.list_plugins()
+    rebuild_plugin_repo(all_plugins, data_dir / "plugin_repo")
     return record
 
 
-async def remove_user_source(repo: PluginRepository, source_id: str) -> None:
+async def reindex_source_and_rebuild(
+    source: SourceRecord, repo: PluginRepository, data_dir: Path
+) -> int:
+    """Index a single source then rebuild the plugin git repo. For single-source API mutations."""
+    count = await index_source(source, repo, data_dir)
+    all_plugins = await repo.list_plugins()
+    rebuild_plugin_repo(all_plugins, data_dir / "plugin_repo")
+    return count
+
+
+async def remove_user_source(repo: PluginRepository, source_id: str, data_dir: Path) -> None:
     """Delete a user-owned source and all its plugins. Raises ValueError for system sources."""
     source = await repo.get_source(source_id)
     if source is None:
@@ -148,3 +160,5 @@ async def remove_user_source(repo: PluginRepository, source_id: str) -> None:
             await repo.delete_plugin(plugin.name)
 
     await repo.delete_source(source_id)
+    remaining = await repo.list_plugins()
+    rebuild_plugin_repo(remaining, data_dir / "plugin_repo")

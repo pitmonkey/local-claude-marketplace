@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 async def _git_http_backend(request: Request, path: str) -> Response:
@@ -43,7 +45,9 @@ async def _git_http_backend(request: Request, path: str) -> Response:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, _ = await proc.communicate(input=body)
+    stdout, stderr = await proc.communicate(input=body)
+    if stderr:
+        logger.error("git-http-backend stderr: %s", stderr.decode("utf-8", errors="replace"))
 
     for sep in (b"\r\n\r\n", b"\n\n"):
         idx = stdout.find(sep)
