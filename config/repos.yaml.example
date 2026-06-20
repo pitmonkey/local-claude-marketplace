@@ -22,6 +22,14 @@ repos:
   #   ownership: mine
   #   format: flat
 
+  # Example: public structured skill repo with skills under a subdirectory
+  # - url: https://github.com/Xquik-dev/x-twitter-scraper
+  #   name: x-twitter-scraper
+  #   description: Xquik skill for X/Twitter data workflows
+  #   ownership: mine
+  #   format: proper
+  #   subpath: skills
+
   # Example: local filesystem repo (only works if mounted into the container)
   # - url: /mnt/local-skills
   #   name: local-internal

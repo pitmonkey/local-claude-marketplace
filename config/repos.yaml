@@ -7,3 +7,9 @@ repos:
     ownership: remote
     format: auto
 
+  - url: https://github.com/Xquik-dev/x-twitter-scraper
+    name: x-twitter-scraper
+    description: Xquik skill for X/Twitter data workflows
+    ownership: mine
+    format: proper
+    subpath: skills
