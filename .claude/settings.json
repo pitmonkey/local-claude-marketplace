@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "claude-dev-skills": {
+      "source": {
+        "source": "github",
+        "repo": "pitmonkey/claude-dev-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "claude-dev-skills@claude-dev-skills": true
+  }
+}
