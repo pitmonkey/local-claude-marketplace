@@ -1,32 +1,62 @@
 version: 2
-
-multi-ecosystem-groups:
-  weekly-deps:
-    schedule:
-      interval: weekly
-      day: monday
-
 updates:
   - package-ecosystem: uv
     directory: /
-    patterns:
-      - "*"
-    multi-ecosystem-group: weekly-deps
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      uv-dev:
+        dependency-type: development
+        patterns:
+          - "*"
+      uv-prod:
+        dependency-type: production
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
 
   - package-ecosystem: docker
     directory: /
-    patterns:
-      - "*"
-    multi-ecosystem-group: weekly-deps
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      docker-all:
+        patterns:
+          - "*"
+        update-types:
+          - major
+          - minor
+          - patch
+    open-pull-requests-limit: 10
 
   - package-ecosystem: pre-commit
     directory: /
-    patterns:
-      - "*"
-    multi-ecosystem-group: weekly-deps
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      pre-commit-all:
+        patterns:
+          - "*"
+        update-types:
+          - major
+          - minor
+          - patch
+    open-pull-requests-limit: 10
 
   - package-ecosystem: github-actions
     directory: /
-    patterns:
-      - "*"
-    multi-ecosystem-group: weekly-deps
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions-all:
+        patterns:
+          - "*"
+        update-types:
+          - major
+          - minor
+          - patch
+    open-pull-requests-limit: 10
