@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -39,3 +39,17 @@ jobs:
       lint-result: ${{ needs.lint.result }}
       build-result: ${{ needs.build.result }}
     secrets: inherit
+
+  # Single uniform required status check for the whole org. Job names differ per
+  # repo (and a path-filtered job that is skipped emits no check run at all), so a
+  # ruleset cannot require them directly. This job always runs, so it always
+  # reports. `notify` is excluded deliberately: a Slack delivery failure must not
+  # block a merge.
+  ci-green:
+    needs: [test, lint, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
