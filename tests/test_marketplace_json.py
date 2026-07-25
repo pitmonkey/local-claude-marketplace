@@ -45,7 +45,7 @@ def _make_plugin(
 def app_with_repo(tmp_path: Path) -> FastAPI:
     """Create a FastAPI app with a seeded SQLite repo."""
     repo = SqliteRepository(tmp_path / "test.db")
-    asyncio.get_event_loop().run_until_complete(repo.init())
+    asyncio.run(repo.init())
 
     app = FastAPI()
     app.state.repo = repo
@@ -86,7 +86,7 @@ def test_marketplace_json_excludes_local_plugins(app_with_repo: FastAPI) -> None
         name="local-plugin",
         source_url="/mnt/local",
     )
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(local_plugin))
+    asyncio.run(repo.upsert_plugin(local_plugin))
 
     response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
@@ -110,8 +110,8 @@ def test_marketplace_json_includes_http_plugins(app_with_repo: FastAPI) -> None:
         source_url="http://example.com/plugin",
     )
 
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(https_plugin))
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(http_plugin))
+    asyncio.run(repo.upsert_plugin(https_plugin))
+    asyncio.run(repo.upsert_plugin(http_plugin))
 
     response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
@@ -135,7 +135,7 @@ def test_marketplace_json_plugin_fields(app_with_repo: FastAPI) -> None:
         source_path="skills/test-skill",
         repo_sha="sha123456",
     )
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
@@ -164,8 +164,8 @@ def test_marketplace_json_category_mapping(app_with_repo: FastAPI) -> None:
     skill = _make_plugin(name="my-skill", type="skill")
     subagent = _make_plugin(name="my-agent", type="subagent")
 
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(skill))
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(subagent))
+    asyncio.run(repo.upsert_plugin(skill))
+    asyncio.run(repo.upsert_plugin(subagent))
 
     response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
@@ -183,7 +183,7 @@ def test_homepage_url_uses_request_host(app_with_repo: FastAPI) -> None:
     repo = app_with_repo.state.repo
 
     plugin = _make_plugin(name="test-plugin")
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200
@@ -220,7 +220,7 @@ def test_marketplace_json_includes_flat_plugins(app_with_repo: FastAPI) -> None:
         version_counter=0,
         updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
     )
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(flat_plugin))
+    asyncio.run(repo.upsert_plugin(flat_plugin))
 
     response = client.get("/.claude-plugin/marketplace.json")
     assert response.status_code == 200

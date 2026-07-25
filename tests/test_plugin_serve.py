@@ -47,7 +47,7 @@ def _make_plugin(
 def app_with_repo(tmp_path: Path) -> FastAPI:
     """Create a FastAPI app with both marketplace and plugin_serve routers and a seeded SQLite repo."""
     repo = SqliteRepository(tmp_path / "test.db")
-    asyncio.get_event_loop().run_until_complete(repo.init())
+    asyncio.run(repo.init())
 
     app = FastAPI()
     app.state.repo = repo
@@ -60,7 +60,7 @@ def test_plugin_json_skill(app_with_repo: FastAPI) -> None:
     """GET /plugins/{name}/.claude-plugin/plugin.json returns correct skill manifest without agents key."""
     repo = app_with_repo.state.repo
     plugin = _make_plugin(name="test-skill", type="skill", description="A useful skill")
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/test-skill/.claude-plugin/plugin.json")
@@ -78,7 +78,7 @@ def test_plugin_json_subagent(app_with_repo: FastAPI) -> None:
     """GET /plugins/{name}/.claude-plugin/plugin.json returns manifest with agents list for subagent."""
     repo = app_with_repo.state.repo
     plugin = _make_plugin(name="my-agent", type="subagent", description="An agent")
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/my-agent/.claude-plugin/plugin.json")
@@ -104,7 +104,7 @@ def test_skill_content(app_with_repo: FastAPI) -> None:
         type="skill",
         content="# My Skill\n\nDo amazing things.",
     )
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/test-skill/skills/test-skill/SKILL.md")
@@ -121,7 +121,7 @@ def test_agent_content(app_with_repo: FastAPI) -> None:
         type="subagent",
         content="# My Agent\n\nDoes agent things.",
     )
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/my-agent/my-agent.md")
@@ -134,7 +134,7 @@ def test_agent_wrong_name_404(app_with_repo: FastAPI) -> None:
     """GET /plugins/{name}/{agent_name}.md returns 404 when agent_name != plugin name."""
     repo = app_with_repo.state.repo
     plugin = _make_plugin(name="my-agent", type="subagent")
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/my-agent/other-name.md")
@@ -152,7 +152,7 @@ def test_agent_content_wrong_type_404(app_with_repo: FastAPI) -> None:
     """GET /plugins/{name}/{agent_name}.md returns 404 when plugin is a skill, not a subagent."""
     repo = app_with_repo.state.repo
     plugin = _make_plugin(name="test-skill", type="skill")
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/test-skill/test-skill.md")
@@ -163,7 +163,7 @@ def test_skill_content_wrong_type_404(app_with_repo: FastAPI) -> None:
     """GET /plugins/{name}/skills/{skill_name}/SKILL.md returns 404 when plugin is a subagent."""
     repo = app_with_repo.state.repo
     plugin = _make_plugin(name="my-agent", type="subagent")
-    asyncio.get_event_loop().run_until_complete(repo.upsert_plugin(plugin))
+    asyncio.run(repo.upsert_plugin(plugin))
 
     client = TestClient(app_with_repo)
     response = client.get("/plugins/my-agent/skills/my-agent/SKILL.md")
