@@ -8,11 +8,23 @@ on:
 
 jobs:
   test:
+    # GitHub-hosted runner: this repo is public, and the org's self-hosted
+    # runner group sets allows_public_repositories=false. Enabling that would
+    # let fork pull requests execute arbitrary code on the cluster runners, so
+    # the public repo uses hosted runners instead.
     uses: pitmonkey/.github/.github/workflows/test-python.yml@main
+    with:
+      runner: ubuntu-latest
     secrets: inherit
 
   lint:
+    # GitHub-hosted runner: this repo is public, and the org's self-hosted
+    # runner group sets allows_public_repositories=false. Enabling that would
+    # let fork pull requests execute arbitrary code on the cluster runners, so
+    # the public repo uses hosted runners instead.
     uses: pitmonkey/.github/.github/workflows/lint-python.yml@main
+    with:
+      runner: ubuntu-latest
     secrets: inherit
 
   build:
@@ -20,6 +32,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     uses: pitmonkey/.github/.github/workflows/build-docker.yml@main
     with:
+      runner: ubuntu-latest
       image-name: local-claude-marketplace
       dockerhub-auth: ${{ github.actor != 'dependabot[bot]' }}
       platforms: linux/amd64,linux/arm64
@@ -34,6 +47,7 @@ jobs:
     if: always() && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     uses: pitmonkey/.github/.github/workflows/notify-slack.yml@main
     with:
+      runner: ubuntu-latest
       project-name: local-claude-marketplace
       test-result: ${{ needs.test.result }}
       lint-result: ${{ needs.lint.result }}
