@@ -21,11 +21,7 @@ jobs:
     uses: pitmonkey/.github/.github/workflows/build-docker.yml@main
     with:
       image-name: local-claude-marketplace
-      # Must be a literal: build-docker declares dockerhub-auth as type
-      # boolean, and a ${{ }} expression yields a string, which makes GitHub
-      # reject the whole workflow file. The old dependabot conditional is
-      # redundant now that build-docker skips Dependabot pull requests itself.
-      dockerhub-auth: true
+      dockerhub-auth: ${{ github.actor != 'dependabot[bot]' }}
       platforms: linux/amd64,linux/arm64
     permissions:
       contents: read
