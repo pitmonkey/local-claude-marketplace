@@ -42,18 +42,6 @@ jobs:
       actions: write
     secrets: inherit
 
-  notify:
-    needs: [test, lint, build]
-    if: always() && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    uses: pitmonkey/.github/.github/workflows/notify-slack.yml@main
-    with:
-      runner: ubuntu-latest
-      project-name: local-claude-marketplace
-      test-result: ${{ needs.test.result }}
-      lint-result: ${{ needs.lint.result }}
-      build-result: ${{ needs.build.result }}
-    secrets: inherit
-
   # Single uniform required status check for the whole org. Job names differ per
   # repo (and a path-filtered job that is skipped emits no check run at all), so a
   # ruleset cannot require them directly. This job always runs, so it always
