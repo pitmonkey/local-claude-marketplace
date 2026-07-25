@@ -34,7 +34,13 @@ jobs:
     with:
       runner: ubuntu-latest
       image-name: local-claude-marketplace
-      dockerhub-auth: ${{ github.actor != 'dependabot[bot]' }}
+      # Must be false: DOCKERHUB_USERNAME/TOKEN are org secrets, and GitHub
+      # does not expose org secrets to public repositories, so the login
+      # action fails with "Username and password required" and takes the
+      # whole build with it. Base images are pulled anonymously instead,
+      # which risks the shared-IP Docker Hub rate limit on a busy day - the
+      # credentials that would avoid it simply cannot reach a public repo.
+      dockerhub-auth: false
       platforms: linux/amd64,linux/arm64
     permissions:
       contents: read
