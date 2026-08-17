@@ -13,7 +13,7 @@ repos:
         files: ^src/
         additional_dependencies:
           - "types-PyYAML"
-          - "sqlalchemy[asyncio]>=2.0.51"
+          - "sqlalchemy[asyncio]>=2.0.52"
           - "aiosqlite>=0.22.1"
           - "markdown-it-py>=4.2.0"
           - "fastapi>=0.141.1"
