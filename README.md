@@ -20,6 +20,7 @@ Claude Code's marketplace protocol lets you add custom marketplace sources in se
 Sources can be configured in `config/repos.yaml` or via the UI at runtime. By default the docker image comes bundles with the [VoltAgents](https://github.com/VoltAgent/awesome-claude-code-subagents)
 
 **Docker:**
+
 ```bash
 # 1. Edit config/repos.yaml to add the repos you want to index (one is included by default)
 
@@ -31,6 +32,7 @@ open http://localhost:8080
 ```
 
 **Local (uv):**
+
 ```bash
 # 1. Edit config/repos.yaml if needed, then:
 uv run uvicorn src.marketplace.main:app --host 0.0.0.0 --port 8080 --reload
@@ -104,14 +106,14 @@ repos:
   - url: https://github.com/VoltAgent/awesome-claude-code-subagents
     name: awesome-claude-code-subagents
     description: Community Claude Code skills and agents
-    ownership: remote   # remote = deep-walk all .md files
-    format: auto        # auto-detect repo layout
+    ownership: remote # remote = deep-walk all .md files
+    format: auto # auto-detect repo layout
 
   - url: https://github.com/yourorg/internal-skills
     name: internal-skills
     description: Company-internal skills
     ownership: mine
-    format: flat        # flat = .md files at repo root
+    format: flat # flat = .md files at repo root
 ```
 
 Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options for reference. For private repos, set `requires_auth: true` on the source and supply `GIT_AUTH_TOKEN` at runtime — the token is injected ephemerally at clone/pull time and never written to disk or config.
@@ -119,7 +121,7 @@ Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options
 ### Environment variables
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `DATA_DIR` | `/data` | Persistent data root — git clones and DB |
 | `CONFIG_FILE` | `/config/repos.yaml` | Path to `repos.yaml` |
 | `PORT` | `8080` | HTTP listen port |
@@ -130,11 +132,12 @@ Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options
 | `S3_ACCESS_KEY` | — | S3 credentials |
 | `S3_SECRET_KEY` | — | S3 credentials |
 | `GIT_AUTH_TOKEN` | — | PAT for sources with `requires_auth: true` — never stored, injected at clone/pull time |
+| `LOG_LEVEL` | `INFO` | Logging level |
 
 ## API
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | `GET` | `/marketplace.json` | Claude Code-compatible plugin feed |
 | `GET` | `/api/plugins` | List plugins (`?q=`, `?type=`, `?tags=`) |
 | `GET` | `/api/plugins/{name}` | Get single plugin |

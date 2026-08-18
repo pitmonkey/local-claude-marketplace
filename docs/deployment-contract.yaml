@@ -1,0 +1,103 @@
+# Deployment contract for local-claude-marketplace.
+#
+# Machine-readable declaration of what this app's deployment must provide: every
+# environment variable the code reads, and every Secret / ConfigMap object the
+# deployment supplies. Consumed by the weekly k8s-deployment-drift audit, which
+# compares this against the FluxCD manifests in pitmonkey/k3s-infra.
+#
+# Rules (see https://github.com/pitmonkey/agentic-workflow-hub/blob/main/workflows/k8s-deployment-drift/deployments.md):
+#   - An entry with no `required:` key is read as REQUIRED by the consumer, so
+#     optional entries MUST say `required: false` explicitly.
+#   - No credential VALUE appears here — names, required-ness and non-secret
+#     defaults only.
+#
+# The env list is verified against the code by tests/test_deployment_contract.py,
+# which derives it by AST-walking src/. Do not hand-edit env entries out of sync
+# with the code — CI will fail.
+kind: DeploymentContract
+
+env:
+  DATA_DIR:
+    required: false
+    default: /data
+    description: Persistent data root (SQLite DB + git clones). Read in src/marketplace/config.py.
+  CONFIG_FILE:
+    required: false
+    default: /config/repos.yaml
+    description: Path to repos.yaml source list. Read in src/marketplace/config.py.
+  PORT:
+    required: false
+    default: "8080"
+    description: Uvicorn listen port (parsed to int). Read in src/marketplace/config.py.
+  STORAGE_BACKEND:
+    required: false
+    default: sqlite
+    description: Storage backend selector, `sqlite` or `s3`. Selects whether the S3_* vars below are needed. Read in src/marketplace/config.py.
+  DB_PATH:
+    required: false
+    default: /data/db/marketplace.db
+    description: >-
+      SQLite database file (sqlite backend only). The code default is DERIVED from
+      DATA_DIR (str(DATA_DIR / "db" / "marketplace.db")); the value recorded here is
+      that derived path with DATA_DIR unset. Setting DATA_DIR alone moves this path
+      accordingly. Read in src/marketplace/config.py.
+  S3_ENDPOINT:
+    required: false
+    default: null
+    description: >-
+      S3-compatible endpoint URL (e.g. MinIO/rustfs). Optional in general; required
+      in practice when STORAGE_BACKEND=s3. Code default is None. Read in
+      src/marketplace/config.py.
+  S3_BUCKET:
+    required: false
+    default: marketplace
+    description: S3 bucket name (used when STORAGE_BACKEND=s3). Read in src/marketplace/config.py.
+  S3_ACCESS_KEY:
+    required: false
+    default: null
+    description: >-
+      S3 access key. Optional in general; required when STORAGE_BACKEND=s3. Code
+      default is None (boto3's credential chain may otherwise supply it). No value
+      recorded — supplied via the s3-credentials Secret. Read in src/marketplace/config.py.
+  S3_SECRET_KEY:
+    required: false
+    default: null
+    description: >-
+      S3 secret key. Optional in general; required when STORAGE_BACKEND=s3. Code
+      default is None (boto3's credential chain may otherwise supply it). No value
+      recorded — supplied via the s3-credentials Secret. Read in src/marketplace/config.py.
+  LOG_LEVEL:
+    required: false
+    default: INFO
+    description: Logging level. Read in src/marketplace/main.py via os.environ.get.
+  GIT_AUTH_TOKEN:
+    required: false
+    default: null
+    description: >-
+      PAT for sources with requires_auth: true; injected into the HTTPS clone/pull
+      URL ephemerally, never stored. Optional; required only if a private source is
+      configured. Code default is None. No value recorded — supplied via the git-auth
+      Secret. Read in src/marketplace/core/sources.py via os.environ.get.
+
+# Secret / ConfigMap objects the deployment must provide. Object names verified
+# against pitmonkey/k3s-infra clusters/pi-cluster/apps/local-claude-marketplace.
+resources:
+  marketplace-config:
+    kind: ConfigMap
+    description: >-
+      Non-secret env vars for the container (DATA_DIR, CONFIG_FILE, STORAGE_BACKEND,
+      S3_ENDPOINT, S3_BUCKET). Consumed via envFrom.configMapRef.
+  marketplace-repos:
+    kind: ConfigMap
+    description: Provides /config/repos.yaml (the source list CONFIG_FILE points at). Mounted at /config.
+  s3-credentials:
+    kind: Secret
+    description: >-
+      S3 credentials the storage backend needs (S3_ACCESS_KEY, S3_SECRET_KEY, and
+      S3_* config) when STORAGE_BACKEND=s3. Consumed via envFrom.secretRef. Provided
+      as a SealedSecret in the FluxCD repo.
+  git-auth:
+    kind: Secret
+    description: >-
+      Supplies GIT_AUTH_TOKEN for private sources. Consumed via envFrom.secretRef.
+      Provided as a SealedSecret in the FluxCD repo.

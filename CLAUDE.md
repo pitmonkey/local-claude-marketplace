@@ -17,7 +17,7 @@ uv run mypy src/                                               # type check
 ## Architecture
 
 | File | Role |
-|------|------|
+| --- | --- |
 | `src/marketplace/main.py` | FastAPI app with lifespan startup |
 | `src/marketplace/config.py` | Settings dataclass, `get_settings()`, `load_repos_yaml()` |
 | `src/marketplace/api/marketplace.py` | `GET /.claude-plugin/marketplace.json` — Claude Code plugin feed (also aliased at `/marketplace.json`) |
@@ -40,7 +40,7 @@ uv run mypy src/                                               # type check
 `scanner.py` detects one of three layouts per source:
 
 | Layout | Trigger | What gets indexed |
-|--------|---------|-------------------|
+| --- | --- | --- |
 | `remote` | `ownership: remote` | Deep-walk entire tree; sibling `skill.yaml` supplies rich metadata; bare `.md` files must have YAML frontmatter with `name` + >50 char body or are skipped; common doc filenames (`claude.md`, `readme.md`, etc.) always skipped |
 | `flat` | `ownership: mine` + no subdirs with `skill.yaml` | Root-level `.md` files only; metadata from YAML frontmatter |
 | `proper` | `ownership: mine` + subdirs contain `skill.yaml` or `SKILL.md` | One subdir per plugin; `skill.yaml` for metadata + `SKILL.md` for content |
@@ -55,6 +55,7 @@ For test patterns, fixtures, and mocking setup, read `docs/testing.md`.
 
 - **SQLite is single-writer** — do not run multiple replicas with `STORAGE_BACKEND=sqlite`; use `s3` backend for horizontal scaling
 - **Private repos** — set `requires_auth: true` on a source and supply `GIT_AUTH_TOKEN` at runtime; token is injected into the HTTPS URL at clone/pull time and never stored
+- **Env var reads are contract-bound** — every `os.getenv` / `os.environ` read in `src/` must have an entry in `docs/deployment-contract.yaml`; `tests/test_deployment_contract.py` AST-derives the list from code and fails CI on drift in either direction
 
 ## Deployment
 
