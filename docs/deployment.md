@@ -7,6 +7,7 @@ docker build -t local-claude-marketplace .
 ```
 
 The image:
+
 - Base: `python:3.14-slim` + `git`
 - Installs deps via `uv sync --no-dev --frozen`
 - Exposes port `8080`
@@ -22,6 +23,7 @@ docker compose up -d
 ```
 
 The compose file mounts:
+
 - `./data` → `/data` — SQLite DB and git clones (write)
 - `./config` → `/config` — `repos.yaml` source list (read-only)
 
@@ -29,8 +31,10 @@ The compose file mounts:
 
 ## Environment variables
 
+> **Machine-readable source of truth:** [`deployment-contract.yaml`](deployment-contract.yaml) is the parsed contract (`kind: DeploymentContract`) consumed by the `k8s-deployment-drift` audit — it enumerates every env var (required/optional + default) and every Secret / ConfigMap the deployment must provide. `tests/test_deployment_contract.py` derives the env list from the code (AST walk of `src/`) and fails CI if this table and the contract drift from what the code reads. The table below is human-facing prose; edit the contract too when a setting changes.
+
 | Variable | Default | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `DATA_DIR` | `/data` | Persistent data root (DB + clones) |
 | `CONFIG_FILE` | `/config/repos.yaml` | Path to `repos.yaml` |
 | `PORT` | `8080` | Uvicorn listen port |
@@ -41,6 +45,7 @@ The compose file mounts:
 | `S3_ACCESS_KEY` | — | S3 credentials |
 | `S3_SECRET_KEY` | — | S3 credentials |
 | `GIT_AUTH_TOKEN` | — | PAT for sources with `requires_auth: true`; injected into HTTPS URL at clone/pull time, never stored |
+| `LOG_LEVEL` | `INFO` | Logging level (read in `main.py`) |
 
 ---
 
@@ -50,10 +55,10 @@ The compose file mounts:
 
 Two volumes are required:
 
-| Mount | Access | Purpose |
-|---|---|---|
-| `/data` | ReadWriteOnce | SQLite DB and cloned repos |
-| `/config` | ReadOnlyMany | `repos.yaml` (ConfigMap or shared PV) |
+| Mount     | Access        | Purpose                               |
+| --------- | ------------- | ------------------------------------- |
+| `/data`   | ReadWriteOnce | SQLite DB and cloned repos            |
+| `/config` | ReadOnlyMany  | `repos.yaml` (ConfigMap or shared PV) |
 
 **Do not run multiple replicas with `STORAGE_BACKEND=sqlite`** — SQLite does not support concurrent writers from separate pods. Use `s3` backend for multi-replica deployments.
 
@@ -82,7 +87,7 @@ kind: Deployment
 metadata:
   name: marketplace
 spec:
-  replicas: 1                        # see note above — 1 replica for sqlite
+  replicas: 1 # see note above — 1 replica for sqlite
   selector:
     matchLabels:
       app: marketplace
