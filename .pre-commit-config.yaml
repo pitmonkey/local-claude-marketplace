@@ -18,5 +18,5 @@ repos:
           - "markdown-it-py>=4.2.0"
           - "fastapi>=0.141.1"
           - "python-multipart>=0.0.32"
-          - "dulwich>=1.2.13"
+          - "dulwich>=1.2.14"
           - "a2wsgi>=1.10.10"
