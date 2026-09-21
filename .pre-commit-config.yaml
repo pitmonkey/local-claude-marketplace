@@ -13,10 +13,10 @@ repos:
         files: ^src/
         additional_dependencies:
           - "types-PyYAML"
-          - "sqlalchemy[asyncio]>=2.0.52"
+          - "sqlalchemy[asyncio]>=2.0.54"
           - "aiosqlite>=0.22.1"
           - "markdown-it-py>=4.2.0"
           - "fastapi>=0.141.1"
           - "python-multipart>=0.0.32"
-          - "dulwich>=1.2.14"
+          - "dulwich>=1.2.15"
           - "a2wsgi>=1.10.10"
