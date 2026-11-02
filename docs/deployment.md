@@ -15,6 +15,10 @@ The image:
 
 ---
 
+## CI build
+
+`.github/workflows/ci.yml` delegates tests, lint, and Docker builds to organization reusable workflows on `ubuntu-latest`. Builds target `linux/amd64` and `linux/arm64`, use image name `local-claude-marketplace`, and disable Docker Hub authentication. Fork pull requests skip the build; `ci-green` checks upstream results. Registry and tag behavior are controlled by the reusable build workflow.
+
 ## Local / single-host (docker compose)
 
 ```bash
@@ -31,21 +35,7 @@ The compose file mounts:
 
 ## Environment variables
 
-> **Machine-readable source of truth:** [`deployment-contract.yaml`](deployment-contract.yaml) is the parsed contract (`kind: DeploymentContract`) consumed by the `k8s-deployment-drift` audit — it enumerates every env var (required/optional + default) and every Secret / ConfigMap the deployment must provide. `tests/test_deployment_contract.py` derives the env list from the code (AST walk of `src/`) and fails CI if this table and the contract drift from what the code reads. The table below is human-facing prose; edit the contract too when a setting changes.
-
-| Variable | Default | Notes |
-| --- | --- | --- |
-| `DATA_DIR` | `/data` | Persistent data root (DB + clones) |
-| `CONFIG_FILE` | `/config/repos.yaml` | Path to `repos.yaml` |
-| `PORT` | `8080` | Uvicorn listen port |
-| `STORAGE_BACKEND` | `sqlite` | `sqlite` or `s3` |
-| `DB_PATH` | `$DATA_DIR/db/marketplace.db` | SQLite only |
-| `S3_ENDPOINT` | — | S3-compatible URL (e.g. MinIO) |
-| `S3_BUCKET` | `marketplace` | S3 bucket name |
-| `S3_ACCESS_KEY` | — | S3 credentials |
-| `S3_SECRET_KEY` | — | S3 credentials |
-| `GIT_AUTH_TOKEN` | — | PAT for sources with `requires_auth: true`; injected into HTTPS URL at clone/pull time, never stored |
-| `LOG_LEVEL` | `INFO` | Logging level (read in `main.py`) |
+See [deployment-contract.yaml](deployment-contract.yaml) for environment keys, required flags, defaults, and deployment resources. `tests/test_deployment_contract.py` checks names, required flags, and literal defaults against application reads; the derived `DB_PATH` default is not value-checked. See [configuration.md](configuration.md#environment-variables) for runtime configuration behavior.
 
 ---
 

@@ -17,7 +17,7 @@ Claude Code's marketplace protocol lets you add custom marketplace sources in se
 
 ## Quick Start
 
-Sources can be configured in `config/repos.yaml` or via the UI at runtime. By default the docker image comes bundles with the [VoltAgents](https://github.com/VoltAgent/awesome-claude-code-subagents)
+Sources can be configured in `config/repos.yaml` or via the UI at runtime. The supplied `config/repos.yaml` includes [VoltAgents](https://github.com/VoltAgent/awesome-claude-code-subagents).
 
 **Docker:**
 
@@ -34,7 +34,10 @@ open http://localhost:8080
 **Local (uv):**
 
 ```bash
-# 1. Edit config/repos.yaml if needed, then:
+# 1. Configure local paths and edit config/repos.yaml if needed:
+cp .env.example .env
+
+# Start the server:
 uv run uvicorn src.marketplace.main:app --host 0.0.0.0 --port 8080 --reload
 
 # 2. Open the web UI
@@ -67,72 +70,9 @@ Skills and agents will then be available to browse and install from within Claud
 - **Two storage backends** — SQLite (default, zero config) or S3-compatible object storage
 - **Docker-first** — single container, compose file included
 
-### Supported repo layouts
-
-The indexer handles three layouts, selected per-source via `ownership` and `format`:
-
-**`remote` — third-party repos (e.g. community collections)**
-
-Set `ownership: remote`. The indexer deep-walks the entire repo tree looking for `.md` files. Each file is treated as a plugin. If a sibling `skill.yaml` exists, its structured metadata (name, version, description, tags, author, type) is used; otherwise metadata is read from YAML frontmatter embedded in the `.md` file. Duplicate names across subdirectories are disambiguated with a parent-directory prefix. Use this for repos you don't control, like `awesome-claude-code-subagents`.
-
-Version is auto-managed: each reindex computes a SHA of the file's content; if it changed since the last index, the version counter increments (`1.0.0` → `1.0.1` → ...).
-
-**`mine` + `format: flat` — your own flat repo**
-
-Set `ownership: mine`, `format: flat` (or omit `format` — auto-detected when no subdirs contain `skill.yaml`). The indexer scans only root-level `.md` files. Name, description, and type are read from YAML frontmatter at the top of each file. The simplest layout for a personal or team skills repo: one `.md` file per skill.
-
-Version is auto-managed the same way as `remote`: file SHA tracked across reindexes, counter increments on change. Commit a change to the `.md` file, reindex, and the version bumps automatically.
-
-**`mine` + `format: proper` — structured plugin repo**
-
-Set `ownership: mine`, `format: proper` (or omit `format` — auto-detected when subdirs contain `skill.yaml` or `SKILL.md`). Each plugin is a subdirectory containing:
-
-```
-my-skill/
-  skill.yaml   ← structured metadata (name, version, description, tags, author, type)
-  SKILL.md     ← skill content (or <name>.md, or any single .md file)
-```
-
-Version is explicit: set the `version` field in `skill.yaml` and the indexer uses it as-is. If `version` is omitted, the same auto-increment behaviour as `flat` applies. This layout gives full control — bump the version in `skill.yaml` as part of your commit, and the marketplace reflects it on the next reindex.
-
-**Note:** If you already manage your own skills repo and add it directly to Claude Code as a marketplace source, you don't need `ownership: mine` — that layout is mainly useful when you want a single centralized marketplace serving multiple users.
-
 ## Configuration
 
-Sources are defined in `config/repos.yaml`:
-
-```yaml
-repos:
-  - url: https://github.com/VoltAgent/awesome-claude-code-subagents
-    name: awesome-claude-code-subagents
-    description: Community Claude Code skills and agents
-    ownership: remote # remote = deep-walk all .md files
-    format: auto # auto-detect repo layout
-
-  - url: https://github.com/yourorg/internal-skills
-    name: internal-skills
-    description: Company-internal skills
-    ownership: mine
-    format: flat # flat = .md files at repo root
-```
-
-Edit `config/repos.yaml` directly — `repos.yaml.example` has annotated options for reference. For private repos, set `requires_auth: true` on the source and supply `GIT_AUTH_TOKEN` at runtime — the token is injected ephemerally at clone/pull time and never written to disk or config.
-
-### Environment variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `DATA_DIR` | `/data` | Persistent data root — git clones and DB |
-| `CONFIG_FILE` | `/config/repos.yaml` | Path to `repos.yaml` |
-| `PORT` | `8080` | HTTP listen port |
-| `STORAGE_BACKEND` | `sqlite` | `sqlite` or `s3` |
-| `DB_PATH` | `$DATA_DIR/db/marketplace.db` | SQLite DB path |
-| `S3_ENDPOINT` | — | S3-compatible endpoint URL |
-| `S3_BUCKET` | `marketplace` | S3 bucket name |
-| `S3_ACCESS_KEY` | — | S3 credentials |
-| `S3_SECRET_KEY` | — | S3 credentials |
-| `GIT_AUTH_TOKEN` | — | PAT for sources with `requires_auth: true` — never stored, injected at clone/pull time |
-| `LOG_LEVEL` | `INFO` | Logging level |
+See [docs/configuration.md](docs/configuration.md) for source layouts, authentication, and environment settings. Annotated examples are in [config/repos.yaml.example](config/repos.yaml.example) and [.env.example](.env.example).
 
 ## API
 
@@ -152,7 +92,7 @@ See [docs/deployment.md](docs/deployment.md) for Kubernetes manifests, S3 backen
 
 ## Development
 
-Requires [uv](https://docs.astral.sh/uv/).
+Requires Python 3.12 or newer, Git, and [uv](https://docs.astral.sh/uv/). Copy `.env.example` to `.env` for local paths. See [docs/testing.md](docs/testing.md) for test patterns.
 
 ```bash
 uv sync
