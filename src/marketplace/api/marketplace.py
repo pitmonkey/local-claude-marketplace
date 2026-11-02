@@ -1,7 +1,10 @@
+import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from dulwich.errors import NotGitRepository
+from dulwich.objects import Blob, Commit
 from dulwich.repo import Repo as DulwichRepo
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -24,6 +27,19 @@ async def _build_marketplace_response(request: Request) -> dict[str, Any]:
     base_url = str(request.base_url).rstrip("/")
     git_repo_path: Path = request.app.state.git_repo_path
     head_sha = _plugin_repo_head_sha(git_repo_path)
+
+    if head_sha:
+        committed_repo = DulwichRepo(str(git_repo_path))
+        from dulwich.object_store import tree_lookup_path
+
+        commit = committed_repo[head_sha.encode()]
+        assert isinstance(commit, Commit)
+        _, blob_id = tree_lookup_path(
+            committed_repo.__getitem__, commit.tree, b"claude-catalog.json"
+        )
+        blob = committed_repo[blob_id]
+        assert isinstance(blob, Blob)
+        plugins = [SimpleNamespace(**entry) for entry in json.loads(blob.data)]
 
     plugin_list = []
     for plugin in plugins:

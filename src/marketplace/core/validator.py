@@ -131,6 +131,8 @@ def validate_plugin_file(content: str, name_hint: str = "") -> ValidationResult:
     explicit_type = meta.get("type")
     if explicit_type:
         plugin_type = str(explicit_type)
+    elif name_hint == "SKILL":
+        plugin_type = "skill"
     elif meta.get("model") or meta.get("tools"):
         plugin_type = "subagent"
     else:

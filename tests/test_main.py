@@ -5,7 +5,7 @@ def test_app_exists() -> None:
     """Verify the FastAPI app is importable and has all routers registered."""
     from src.marketplace.main import app
 
-    assert app.title == "Claude Marketplace"
+    assert app.title == "AI Marketplace"
 
     def collect_paths(route_list: list) -> set[str]:  # type: ignore[type-arg]
         paths: set[str] = set()

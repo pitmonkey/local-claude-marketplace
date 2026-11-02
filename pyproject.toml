@@ -1,7 +1,7 @@
 [project]
-name = "local-claude-marketplace"
+name = "local-ai-marketplace"
 version = "0.1.0"
-description = "Self-hosted marketplace for Claude Code skills and agents"
+description = "Self-hosted marketplace for Claude Code and Codex skills and agents"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "pitmonkey" }]

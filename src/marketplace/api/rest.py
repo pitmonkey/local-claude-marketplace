@@ -3,13 +3,14 @@ from __future__ import annotations
 import dataclasses
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 
+from ..core.compatibility import assess_compatibility
 from ..core.sources import add_user_source, index_source, remove_user_source
-from ..storage.base import PluginRepository
+from ..storage.base import PluginRecord, PluginRepository
 
 router = APIRouter(prefix="/api")
 
@@ -31,6 +32,8 @@ def _record_to_dict(record: object) -> dict[str, Any]:
         return obj
 
     result: dict[str, Any] = convert_datetime(data)
+    if isinstance(record, PluginRecord):
+        result.update(dataclasses.asdict(assess_compatibility(record)))
     return result
 
 
@@ -40,6 +43,7 @@ async def list_plugins(
     q: str | None = None,
     type: str | None = None,
     tags: str | None = None,
+    client: Literal["claude", "codex"] | None = None,
 ) -> list[dict[str, Any]]:
     """List plugins with optional filtering by type, tags, and query."""
     repo: PluginRepository = request.app.state.repo
@@ -49,7 +53,11 @@ async def list_plugins(
         tags_list = [t.strip() for t in tags.split(",") if t.strip()]
 
     plugins = await repo.list_plugins(type_filter=type, tags=tags_list, query=q)
-    return [_record_to_dict(plugin) for plugin in plugins]
+    return [
+        _record_to_dict(plugin)
+        for plugin in plugins
+        if client is None or client in assess_compatibility(plugin).supported_clients
+    ]
 
 
 @router.get("/plugins/{name}")
@@ -120,7 +128,7 @@ async def delete_source(request: Request, id: str) -> Response:
     repo: PluginRepository = request.app.state.repo
 
     try:
-        await remove_user_source(repo, id)
+        await remove_user_source(repo, id, request.app.state.data_dir)
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Cannot remove system source") from e
 

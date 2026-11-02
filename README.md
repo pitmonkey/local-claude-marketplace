@@ -1,6 +1,6 @@
-# local-claude-marketplace
+# local-ai-marketplace
 
-A self-hosted marketplace for [Claude Code](https://claude.ai/code) skills and agents. Point it at any number of Git repositories, and it indexes their skills and agents into a searchable web UI — plus a `marketplace.json` feed that Claude Code can install from directly.
+A self-hosted marketplace for Claude Code and Codex skills, plus Claude Code agents. Point it at any number of Git repositories, and it indexes their skills and agents into a searchable web UI — plus a `marketplace.json` feed that Claude Code can install from directly.
 
 ## Why
 
@@ -79,7 +79,7 @@ See [docs/configuration.md](docs/configuration.md) for source layouts, authentic
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/marketplace.json` | Claude Code-compatible plugin feed |
-| `GET` | `/api/plugins` | List plugins (`?q=`, `?type=`, `?tags=`) |
+| `GET` | `/api/plugins` | List plugins (`?q=`, `?type=`, `?tags=`, `?client=`) |
 | `GET` | `/api/plugins/{name}` | Get single plugin |
 | `GET` | `/api/sources` | List sources |
 | `POST` | `/api/sources` | Add a source |
@@ -105,3 +105,22 @@ uv run mypy .
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
+## Add to Codex
+
+Register the generated Git marketplace:
+
+```bash
+codex plugin marketplace add http://localhost:8080/git.git
+```
+
+Open `/plugins`, choose `local-ai-marketplace`, install a skill, and start a new session.
+Registration and HTTP cloning were verified with Codex CLI 0.166.0.
+Skills with valid YAML names and descriptions are published to both clients by default.
+Claude agents and native Claude plugins remain Claude-only. Installation compatibility
+is not a guarantee that instructions mentioning Claude tools work unchanged in Codex.
+Only self-contained Markdown skills are repackaged; scripts, references, and assets are not copied.
+Existing Claude URLs, marketplace identity (`local-claude-marketplace`), and data paths remain stable.
+
+The REST API exposes `supported_clients` and `compatibility_warnings` for each plugin;
+use `/api/plugins?client=codex` or `?client=claude` to filter compatibility.

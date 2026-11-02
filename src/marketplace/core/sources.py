@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from contextvars import ContextVar
 from datetime import UTC, datetime
+from functools import wraps
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from ..storage.base import PluginRecord, PluginRepository, SourceRecord
@@ -14,6 +18,42 @@ from .scanner import scan_repo
 logger = logging.getLogger(__name__)
 
 
+_active_publication: ContextVar[bool] = ContextVar("active_publication", default=False)
+
+
+def published_operation(function: Any) -> Any:
+    @wraps(function)
+    async def wrapped(*args: Any, **kwargs: Any) -> Any:
+        if _active_publication.get():
+            return await function(*args, **kwargs)
+        repo = kwargs.get("repo")
+        if repo is None:
+            repo = args[1] if function.__name__ == "index_source" else args[0]
+        lock = getattr(repo, "_publication_lock", None)
+        if lock is None:
+            lock = asyncio.Lock()
+            repo._publication_lock = lock
+        async with lock:
+            token = _active_publication.set(True)
+            try:
+                result = await function(*args, **kwargs)
+            finally:
+                _active_publication.reset(token)
+            data_dir = kwargs.get("data_dir")
+            if data_dir is None:
+                data_dir = (
+                    args[2]
+                    if function.__name__ in ("index_source", "remove_user_source") and len(args) > 2
+                    else (args[1] if function.__name__ != "remove_user_source" else None)
+                )
+            if data_dir is not None:
+                rebuild_plugin_repo(await repo.list_plugins(), data_dir / "plugin_repo")
+            return result
+
+    return wrapped
+
+
+@published_operation
 async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: Path) -> int:
     """Clone or pull source repo, scan for plugins, upsert/delete in DB. Returns upsert count."""
     repo_path = data_dir / "repos" / source.name
@@ -82,6 +122,7 @@ async def index_source(source: SourceRecord, repo: PluginRepository, data_dir: P
     return len(records)
 
 
+@published_operation
 async def index_all_sources(repo: PluginRepository, data_dir: Path) -> dict[str, int]:
     """Index every source sequentially, then rebuild the plugin git repo.
 
@@ -96,12 +137,10 @@ async def index_all_sources(repo: PluginRepository, data_dir: Path) -> dict[str,
             logger.exception("Failed to index source %r — skipping", source.name)
             results[source.name] = -1
 
-    all_plugins = await repo.list_plugins()
-    rebuild_plugin_repo(all_plugins, data_dir / "plugin_repo")
-
     return results
 
 
+@published_operation
 async def add_user_source(
     repo: PluginRepository,
     data_dir: Path,
@@ -134,7 +173,10 @@ async def add_user_source(
     return record
 
 
-async def remove_user_source(repo: PluginRepository, source_id: str) -> None:
+@published_operation
+async def remove_user_source(
+    repo: PluginRepository, source_id: str, data_dir: Path | None = None
+) -> None:
     """Delete a user-owned source and all its plugins. Raises ValueError for system sources."""
     source = await repo.get_source(source_id)
     if source is None:

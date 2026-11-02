@@ -60,3 +60,10 @@ Edit `config/repos.yaml` directly — `config/repos.yaml.example` has annotated 
 See [deployment-contract.yaml](deployment-contract.yaml) for environment keys, required flags, and defaults. `DB_PATH` defaults to `db/marketplace.db` under `DATA_DIR`. S3 credentials may come from the boto3 credential chain.
 
 `PORT` is read into settings, but the supplied commands explicitly bind Uvicorn to port 8080. Change the Uvicorn command and port mapping to use another port. Set `LOG_LEVEL` in the process environment before startup; logging is configured before `.env` is loaded.
+
+## Client compatibility
+
+Self-contained skills with safe names and YAML name/description fields are eligible
+for Codex by default. Claude subagents and native manifests remain Claude-only.
+Compatibility is structural; Claude-specific instructions may need adaptation.
+Companion files are not included. Existing source configuration requires no migration.

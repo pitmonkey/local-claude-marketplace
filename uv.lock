@@ -1095,7 +1095,7 @@ wheels = [
 ]
 
 [[package]]
-name = "local-claude-marketplace"
+name = "local-ai-marketplace"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

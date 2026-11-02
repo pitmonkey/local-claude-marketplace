@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from markdown_it import MarkdownIt
 
+from ..core.compatibility import assess_compatibility
 from ..core.sources import add_user_source, index_source, remove_user_source
 from ..storage.base import PluginRepository
 
@@ -21,6 +23,7 @@ async def index(
     q: str | None = None,
     type: str | None = None,
     tags: str | None = None,
+    client: Literal["claude", "codex"] | None = None,
 ) -> object:
     """Render the plugin browsing index page."""
     repo: PluginRepository = request.app.state.repo
@@ -31,10 +34,20 @@ async def index(
         tags_list = [t.strip() for t in tags.split(",") if t.strip()]
 
     plugins = await repo.list_plugins(type_filter=type, query=q, tags=tags_list)
+    plugins = [
+        p for p in plugins if client is None or client in assess_compatibility(p).supported_clients
+    ]
     return templates.TemplateResponse(
         request,
         "index.html",
-        {"plugins": plugins, "q": q, "type": type, "tags": tags},
+        {
+            "plugins": plugins,
+            "q": q,
+            "type": type,
+            "tags": tags,
+            "client": client,
+            "assess": assess_compatibility,
+        },
     )
 
 
@@ -57,7 +70,11 @@ async def plugin_detail(request: Request, name: str) -> object:
     return templates.TemplateResponse(
         request,
         "plugin.html",
-        {"plugin": plugin, "content_html": content_html},
+        {
+            "plugin": plugin,
+            "content_html": content_html,
+            "compatibility": assess_compatibility(plugin),
+        },
     )
 
 
@@ -89,6 +106,7 @@ async def search_partial(
     q: str | None = None,
     type: str | None = None,
     tags: str | None = None,
+    client: Literal["claude", "codex"] | None = None,
 ) -> object:
     """Return HTMX partial with plugin cards for live search."""
     repo: PluginRepository = request.app.state.repo
@@ -99,10 +117,13 @@ async def search_partial(
         tags_list = [t.strip() for t in tags.split(",") if t.strip()]
 
     plugins = await repo.list_plugins(type_filter=type, query=q, tags=tags_list)
+    plugins = [
+        p for p in plugins if client is None or client in assess_compatibility(p).supported_clients
+    ]
     return templates.TemplateResponse(
         request,
         "partials/plugin_cards.html",
-        {"plugins": plugins},
+        {"plugins": plugins, "assess": assess_compatibility},
     )
 
 
@@ -143,7 +164,7 @@ async def add_source(
 async def delete_source(request: Request, id: str) -> RedirectResponse:
     """Handle source deletion form submission."""
     repo: PluginRepository = request.app.state.repo
-    await remove_user_source(repo, id)
+    await remove_user_source(repo, id, request.app.state.data_dir)
     return RedirectResponse("/sources", status_code=303)
 
 

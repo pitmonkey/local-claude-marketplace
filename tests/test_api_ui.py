@@ -74,7 +74,7 @@ async def test_ui_index_returns_200(repo: SqliteRepository, client: TestClient) 
     await repo.upsert_plugin(_make_plugin(name="test-plugin"))
     response = client.get("/")
     assert response.status_code == 200
-    assert "Claude Marketplace" in response.text
+    assert "AI Marketplace" in response.text
 
 
 async def test_ui_plugin_detail_returns_200(repo: SqliteRepository, client: TestClient) -> None:

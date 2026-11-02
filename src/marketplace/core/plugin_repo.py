@@ -7,13 +7,19 @@ from __future__ import annotations
 
 import json
 import shutil
+import tempfile
+import threading
 from pathlib import Path
 
 import dulwich.porcelain as porcelain
+from dulwich.objects import ObjectID
 from dulwich.refs import Ref
 from dulwich.repo import Repo
 
 from ..storage.base import PluginRecord
+from .compatibility import assess_compatibility, safe_name
+
+_PUBLICATION_LOCK = threading.RLock()
 
 
 def write_plugin_files(plugin: PluginRecord, plugins_dir: Path) -> None:
@@ -31,6 +37,8 @@ def write_plugin_files(plugin: PluginRecord, plugins_dir: Path) -> None:
         plugin: The plugin record to write.
         plugins_dir: Base directory under which the plugin's subdirectory is created.
     """
+    if not safe_name(plugin.name):
+        raise ValueError("Unsafe package name")
     plugin_dir = plugins_dir / plugin.name
     plugin_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,12 +67,18 @@ def write_plugin_files(plugin: PluginRecord, plugins_dir: Path) -> None:
         (claude_plugin_dir / "plugin.json").write_text(
             json.dumps(plugin_json, indent=2), encoding="utf-8"
         )
+        if "codex" in assess_compatibility(plugin).supported_clients:
+            codex_dir = plugin_dir / ".codex-plugin"
+            codex_dir.mkdir(exist_ok=True)
+            (codex_dir / "plugin.json").write_text(
+                json.dumps({**plugin_json, "skills": "./skills/"}, indent=2), encoding="utf-8"
+            )
         skill_dir = plugin_dir / "skills" / plugin.name
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text(plugin.content, encoding="utf-8")
 
 
-def rebuild_plugin_repo(plugins: list[PluginRecord], repo_path: Path) -> str:
+def _rebuild_plugin_repo(plugins: list[PluginRecord], repo_path: Path) -> str:
     """Write all plugin files to repo_path/plugins/, commit to git, return commit SHA.
 
     Only plugins whose ``source_url`` starts with ``http://`` or ``https://`` are
@@ -107,10 +121,46 @@ def rebuild_plugin_repo(plugins: list[PluginRecord], repo_path: Path) -> str:
         for p in plugins
         if (p.source_url.startswith("http://") or p.source_url.startswith("https://"))
         and p.plugin_format != "manifest"
+        and safe_name(p.name)
     ]
 
     for plugin in remote_plugins:
         write_plugin_files(plugin, plugins_dir)
+
+    catalog_dir = repo_path / ".agents" / "plugins"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+    catalog = {
+        "name": "local-ai-marketplace",
+        "plugins": [
+            {
+                "name": p.name,
+                "source": {"source": "local", "path": f"./plugins/{p.name}"},
+                "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                "category": "Productivity",
+            }
+            for p in remote_plugins
+            if "codex" in assess_compatibility(p).supported_clients
+        ],
+    }
+    (catalog_dir / "marketplace.json").write_text(json.dumps(catalog, indent=2), encoding="utf-8")
+    # Store Claude entries in the same committed snapshot as their packages.
+    (repo_path / "claude-catalog.json").write_text(
+        json.dumps(
+            [
+                {
+                    "name": p.name,
+                    "description": p.description,
+                    "version": p.version,
+                    "type": p.type,
+                    "plugin_format": p.plugin_format,
+                    "source_url": p.source_url,
+                }
+                for p in plugins
+                if "claude" in assess_compatibility(p).supported_clients
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     # Stage everything.
     porcelain.add(str(repo_path))
@@ -125,3 +175,37 @@ def rebuild_plugin_repo(plugins: list[PluginRecord], repo_path: Path) -> str:
     )
 
     return sha_bytes.decode()
+
+
+def rebuild_plugin_repo(plugins: list[PluginRecord], repo_path: Path) -> str:
+    """Validate a complete staging snapshot before advancing the served repository."""
+    with _PUBLICATION_LOCK:
+        repo_path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=repo_path.parent) as staging:
+            candidate = Path(staging) / "repo"
+            if repo_path.exists():
+                shutil.copytree(repo_path, candidate)
+            sha = _rebuild_plugin_repo(plugins, candidate)
+            # Objects are immutable: copy them first, then atomically advance main.
+            if not (repo_path / ".git").exists():
+                repo_path.mkdir(exist_ok=True)
+                Repo.init(str(repo_path))
+            for obj in (candidate / ".git" / "objects").rglob("*"):
+                destination = (
+                    repo_path / ".git" / "objects" / obj.relative_to(candidate / ".git" / "objects")
+                )
+                if obj.is_dir():
+                    destination.mkdir(parents=True, exist_ok=True)
+                elif not destination.exists():
+                    shutil.copyfile(obj, destination)
+            repo = Repo(str(repo_path))
+            repo.refs.set_symbolic_ref(Ref(b"HEAD"), Ref(b"refs/heads/main"))
+            # Working files are conveniences; clients consume the committed tree.
+            for name in ("plugins", ".agents"):
+                target = repo_path / name
+                if target.exists():
+                    shutil.rmtree(target)
+                shutil.copytree(candidate / name, target)
+            shutil.copy2(candidate / "claude-catalog.json", repo_path / "claude-catalog.json")
+            repo.refs[Ref(b"refs/heads/main")] = ObjectID(sha.encode())
+            return sha
