@@ -3,7 +3,7 @@
 ## Docker image
 
 ```bash
-docker build -t local-claude-marketplace .
+docker build -t local-ai-marketplace .
 ```
 
 The image:
@@ -17,7 +17,7 @@ The image:
 
 ## CI build
 
-`.github/workflows/ci.yml` delegates tests, lint, and Docker builds to organization reusable workflows on `ubuntu-latest`. Builds target `linux/amd64` and `linux/arm64`, use image name `local-claude-marketplace`, and disable Docker Hub authentication. Fork pull requests skip the build; `ci-green` checks upstream results. Registry and tag behavior are controlled by the reusable build workflow.
+`.github/workflows/ci.yml` delegates tests, lint, and Docker builds to organization reusable workflows on `ubuntu-latest`. Builds target `linux/amd64` and `linux/arm64`, use image name `local-ai-marketplace`, and disable Docker Hub authentication. Fork pull requests skip the build; `ci-green` checks upstream results. Registry and tag behavior are controlled by the reusable build workflow.
 
 ## Local / single-host (docker compose)
 
@@ -88,7 +88,7 @@ spec:
     spec:
       containers:
         - name: marketplace
-          image: local-claude-marketplace:latest
+          image: local-ai-marketplace:latest
           ports:
             - containerPort: 8080
           env:

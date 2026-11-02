@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ plugin.name }} — Claude Marketplace{% endblock %}
+{% block title %}{{ plugin.name }} — AI Marketplace{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl">
@@ -38,11 +38,16 @@
   <p class="text-base t2 leading-relaxed mb-6">{{ plugin.description }}</p>
   {% endif %}
 
+  {% for client in compatibility.supported_clients %}<span class="rc-tag">{{ client }}</span>{% endfor %}
+  {% for warning in compatibility.compatibility_warnings %}<p>{{ warning }}</p>{% endfor %}
   <!-- Content -->
   <div class="rc-prose prose prose-sm max-w-none p-6 mb-6">
     {{ content_html | safe }}
   </div>
 
+  {% if "codex" in compatibility.supported_clients %}
+  <div class="rc-install-box p-4"><h2>Install via Codex</h2><code>codex plugin marketplace add {{ request.base_url }}git.git</code><p>Open /plugins, select local-ai-marketplace, install {{ plugin.name }}, and start a new session.</p></div>
+  {% endif %}
   <!-- Install instructions -->
   <div class="rc-install-box p-4">
     <h2 class="rc-install-title">Install via Claude Code</h2>

@@ -1,4 +1,4 @@
-# Deployment contract for local-claude-marketplace.
+# Deployment contract for local-ai-marketplace.
 #
 # Machine-readable declaration of what this app's deployment must provide: every
 # environment variable the code reads, and every Secret / ConfigMap object the

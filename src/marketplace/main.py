@@ -102,7 +102,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await asyncio.gather(reindex_task, return_exceptions=True)
 
 
-app = FastAPI(title="Claude Marketplace", lifespan=lifespan)
+app = FastAPI(title="AI Marketplace", lifespan=lifespan)
 
 # rest_router already carries prefix="/api" internally
 app.include_router(marketplace_router)

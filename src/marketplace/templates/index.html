@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Browse Plugins — Claude Marketplace{% endblock %}
+{% block title %}Browse Plugins — AI Marketplace{% endblock %}
 
 {% block content %}
 <div class="mb-6">
@@ -21,28 +21,35 @@
         hx-get="/ui/search"
         hx-trigger="input changed delay:300ms"
         hx-target="#plugin-grid"
-        hx-include="[name='q'],[name='type'],[name='tags']"
+        hx-include="[name='q'],[name='type'],[name='tags'],[name='client']"
       >
     </div>
     <input type="hidden" name="tags" value="{{ tags or '' }}">
   </div>
 
+  <label>Client
+    <select name="client" hx-get="/ui/search" hx-trigger="change" hx-target="#plugin-grid" hx-include="[name='q'],[name='type'],[name='tags'],[name='client']">
+      <option value="">All clients</option>
+      <option value="claude" {% if client == 'claude' %}selected{% endif %}>Claude</option>
+      <option value="codex" {% if client == 'codex' %}selected{% endif %}>Codex</option>
+    </select>
+  </label>
   <!-- Type tabs -->
   <div class="flex gap-2 mb-6">
     <a
-      href="/?{% if q %}q={{ q }}&{% endif %}{% if tags %}tags={{ tags }}&{% endif %}"
+      href="/?client={{ client or '' }}&{% if q %}q={{ q }}&{% endif %}{% if tags %}tags={{ tags }}&{% endif %}"
       class="rc-tab {% if not type %}rc-tab-active-all{% endif %}"
     >All</a>
     <a
-      href="/?type=skill{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
+      href="/?client={{ client or '' }}&type=skill{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
       class="rc-tab {% if type == 'skill' %}rc-tab-active-skill{% endif %}"
     >Skills</a>
     <a
-      href="/?type=subagent{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
+      href="/?client={{ client or '' }}&type=subagent{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
       class="rc-tab {% if type == 'subagent' %}rc-tab-active-agent{% endif %}"
     >Agents</a>
     <a
-      href="/?type=plugin{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
+      href="/?client={{ client or '' }}&type=plugin{% if q %}&q={{ q }}{% endif %}{% if tags %}&tags={{ tags }}{% endif %}"
       class="rc-tab {% if type == 'plugin' %}rc-tab-active-plugin{% endif %}"
     >Plugins</a>
     <input type="hidden" name="type" value="{{ type or '' }}">
